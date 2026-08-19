@@ -122,13 +122,15 @@
             <span id="sidebarTitle">Menu</span>
             <button class="close-sidebar" onclick="toggleSidebar()">✕</button>
         </div>
-        <ul class="sidebar-menu" id="sidebarMenuList">
-            <li onclick="goToGroup()">Group သို့ ပြန်သွားရန်</li>
-            <li onclick="openDirectMessageModal()">Direct Message</li>
-            <li onclick="openProfileModal()">Profile ဓာတ်ပုံနှင့် နာမည်ပြင်ရန်</li>
-            <li id="adminDeviceCheck" style="display:none;" onclick="openDeviceCheckModal()">Device Check</li>
-            <li id="adminAddUser" style="display:none;" onclick="openAddUserModal()">User အသစ်ထည့်ရန်</li>
-        </ul>
+       <ul class="sidebar-menu" id="sidebarMenuList">
+    <li onclick="goToGroup()">Group သို့ ပြန်သွားရန်</li>
+    <li onclick="openDirectMessageModal()">Direct Message</li>
+    <li onclick="openProfileModal()">Profile ဓာတ်ပုံနှင့် နာမည်ပြင်ရန်</li>
+    <li id="adminDeviceCheck" style="display:none;" onclick="openDeviceCheckModal()">Device Check</li>
+    <li id="adminAddUser" style="display:none;" onclick="openAddUserModal()">User အသစ်ထည့်ရန်</li>
+    <li onclick="logoutUser()" style="color: #d9534f; font-weight: bold; cursor: pointer;">အကောင့်ထွက်ရန် (Log Out)</li>
+</ul>
+
     </div>
 
     <div id="chat-container">
@@ -512,7 +514,9 @@ function checkLogin() {
 }
 
 function checkAdminUI() {
-    if (loggedInUsername.toLowerCase() === "user_alpha" || loggedInUsername.toLowerCase().startsWith("admin_")) {
+    const currentName = (typeof loggedInUsername !== 'undefined' && loggedInUsername) ? loggedInUsername : localStorage.getItem('fg_finalName');
+    
+    if (currentName && (currentName.toLowerCase() === "user_alpha" || currentName.toLowerCase().startsWith("admin_"))) {
         document.getElementById('adminDeviceCheck').style.display = 'block';
         document.getElementById('adminAddUser').style.display = 'block';
     } else {
@@ -520,6 +524,7 @@ function checkAdminUI() {
         document.getElementById('adminAddUser').style.display = 'none';
     }
 }
+
 
 function logoutUser() {
     if (confirm("အကောင့်မှ ထွက်မှာ သေချာပါသလား?")) {
