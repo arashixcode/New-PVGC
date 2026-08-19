@@ -15,7 +15,6 @@
             background: #efeae2; 
         }
         
-        /* Login Overlay */
         #login-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #efeae2; display: flex; align-items: center; justify-content: center; z-index: 999; }
         .login-card { background: white; padding: 25px; border-radius: 12px; width: 90%; max-width: 340px; text-align: center; box-shadow: 0 4px 15px rgba(0,0,0,0.15); max-height: 90vh; overflow-y: auto; }
         .login-card h3 { margin-bottom: 15px; color: #075e54; }
@@ -23,7 +22,6 @@
         .login-card button { width: 100%; padding: 12px; background: #075e54; color: white; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; margin-top: 5px; }
         .error-msg { color: red; font-size: 12px; margin-bottom: 10px; display: none; }
 
-        /* Main Chat UI */
         #chat-container { 
             display: flex; 
             flex-direction: column; 
@@ -35,10 +33,11 @@
         header { background: #075e54; color: white; padding: 10px 15px; font-size: 18px; font-weight: bold; display: flex; align-items: center; justify-content: space-between; flex-shrink: 0; }
         .menu-btn { background: none; border: none; color: white; font-size: 22px; cursor: pointer; }
         
-        /* Sidebar / Hamburger Menu */
+        #sidebar-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 999; display: none; }
         #sidebar { position: fixed; top: 0; left: -260px; width: 260px; height: 100%; background: white; box-shadow: 2px 0 10px rgba(0,0,0,0.2); z-index: 1000; transition: left 0.3s ease; display: flex; flex-direction: column; }
         #sidebar.open { left: 0; }
-        .sidebar-header { background: #075e54; color: white; padding: 20px; font-weight: bold; font-size: 16px; }
+        .sidebar-header { background: #075e54; color: white; padding: 20px; font-weight: bold; font-size: 16px; display: flex; justify-content: space-between; align-items: center; }
+        .close-sidebar { background: none; border: none; color: white; font-size: 20px; cursor: pointer; }
         .sidebar-menu { list-style: none; padding: 0; margin: 0; overflow-y: auto; flex: 1; }
         .sidebar-menu li { padding: 15px 20px; border-bottom: 1px solid #eee; cursor: pointer; font-size: 14px; color: #333; }
         .sidebar-menu li:hover { background: #f0f0f0; }
@@ -53,7 +52,6 @@
             padding-bottom: 20px; 
         }
         
-        /* Message Bubbles */
         .msg-row { display: flex; align-items: flex-end; gap: 8px; max-width: 75%; position: relative; }
         .msg-row.my-msg { margin-left: auto; flex-direction: row-reverse; }
         .avatar { width: 36px; height: 36px; border-radius: 50%; object-fit: cover; background: #ddd; flex-shrink: 0; }
@@ -63,11 +61,9 @@
         .my-msg .sender-name { display: none; }
         .del-btn { background: #ff4d4d; color: white; border: none; font-size: 10px; padding: 2px 6px; border-radius: 4px; cursor: pointer; margin-top: 5px; display: none; }
 
-        /* Media */
         .bubble img, .bubble video { max-width: 200px; border-radius: 6px; display: block; margin-top: 5px; }
         .bubble audio { max-width: 220px; display: block; margin-top: 5px; }
 
-        /* Footer Input */
         .chat-footer { 
             background: #f0f0f0; 
             padding: 8px 12px; 
@@ -89,7 +85,6 @@
         .mic-btn.recording { animation: pulse 1s infinite; background: #c62828; }
         @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.1); } 100% { transform: scale(1); } }
 
-        /* Modal Custom */
         .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 2000; align-items: center; justify-content: center; }
         .modal-content { background: white; padding: 20px; border-radius: 8px; width: 90%; max-width: 320px; }
         .modal-content input { width: 100%; padding: 10px; margin: 8px 0; border: 1px solid #ccc; border-radius: 4px; }
@@ -97,7 +92,6 @@
 </head>
 <body>
 
-    <!-- Login & Profile Setup Screen -->
     <div id="login-overlay">
         <div class="login-card">
             <h3>Family Guys Chat</h3>
@@ -119,19 +113,21 @@
         </div>
     </div>
 
-    <!-- Sidebar Menu -->
+    <div id="sidebar-overlay" onclick="toggleSidebar()"></div>
     <div id="sidebar">
-        <div class="sidebar-header" id="sidebarTitle">Menu</div>
+        <div class="sidebar-header">
+            <span id="sidebarTitle">Menu</span>
+            <button class="close-sidebar" onclick="toggleSidebar()">✕</button>
+        </div>
         <ul class="sidebar-menu" id="sidebarMenuList">
+            <li onclick="goToGroup()">Group သို့ ပြန်သွားရန်</li>
             <li onclick="openDirectMessageModal()">Direct Message</li>
             <li onclick="openProfileModal()">Profile ဓာတ်ပုံနှင့် နာမည်ပြင်ရန်</li>
-            <!-- Admin Only Options -->
             <li id="adminDeviceCheck" style="display:none;" onclick="openDeviceCheckModal()">Device Check</li>
             <li id="adminAddUser" style="display:none;" onclick="openAddUserModal()">User အသစ်ထည့်ရန်</li>
         </ul>
     </div>
 
-    <!-- Chat Interface -->
     <div id="chat-container">
         <header>
             <button class="menu-btn" onclick="toggleSidebar()">☰</button>
@@ -150,7 +146,6 @@
         </div>
     </div>
 
-    <!-- Profile Edit Modal -->
     <div id="profileModal" class="modal">
         <div class="modal-content">
             <h3>Profile ပြင်ဆင်ရန်</h3>
@@ -161,7 +156,6 @@
         </div>
     </div>
 
-    <!-- Add User Modal (Admin) -->
     <div id="addUserModal" class="modal">
         <div class="modal-content">
             <h3>User အသစ်ထည့်ရန်</h3>
@@ -172,7 +166,6 @@
         </div>
     </div>
 
-    <!-- Device Check Modal (Admin) -->
     <div id="deviceCheckModal" class="modal">
         <div class="modal-content">
             <h3>Active Devices</h3>
@@ -181,7 +174,6 @@
         </div>
     </div>
 
-    <!-- Direct Message Modal -->
     <div id="dmModal" class="modal">
         <div class="modal-content">
             <h3>Direct Message သို့သွားရန်</h3>
@@ -195,8 +187,7 @@
         const socket = io();
         let finalName = "";
         let finalAvatar = "https://cdn-icons-png.flaticon.com/512/149/149071.png";
-        let currentRoom = "group"; // 'group' သို့မဟုတ် DM room ID
-        let activeUsersList = [];
+        let currentRoom = "group"; 
 
         window.addEventListener('DOMContentLoaded', () => {
             const savedName = localStorage.getItem('fg_finalName');
@@ -211,7 +202,7 @@
         });
 
         function checkAdminUI() {
-            if (finalName === "user_alpha" || finalName.startsWith("admin_")) { // Admin check
+            if (finalName === "user_alpha" || finalName.startsWith("admin_")) {
                 document.getElementById('adminDeviceCheck').style.display = 'block';
                 document.getElementById('adminAddUser').style.display = 'block';
             }
@@ -265,11 +256,25 @@
 
         function toggleSidebar() {
             const sidebar = document.getElementById('sidebar');
+            const overlay = document.getElementById('sidebar-overlay');
             sidebar.classList.toggle('open');
+            if (sidebar.classList.contains('open')) {
+                overlay.style.display = 'block';
+            } else {
+                overlay.style.display = 'none';
+            }
         }
 
         function closeModals() {
             document.querySelectorAll('.modal').forEach(m => m.style.display = 'none');
+        }
+
+        function goToGroup() {
+            toggleSidebar();
+            currentRoom = "group";
+            document.getElementById('chatTitle').innerText = "Family Guys Private Group";
+            document.getElementById('messages').innerHTML = "";
+            socket.emit('join room', { room: 'group', username: finalName });
         }
 
         function openProfileModal() {
@@ -294,6 +299,7 @@
             localStorage.setItem('fg_finalName', finalName);
             localStorage.setItem('fg_finalAvatar', finalAvatar);
             closeModals();
+            checkAdminUI();
             alert("Profile ပြင်ဆင်ပြီးပါပြီ။");
         }
 
@@ -406,7 +412,7 @@
                     audioChunks = [];
                     mediaRecorder.ondataavailable = e => audioChunks.push(e.data);
                     mediaRecorder.onstop = async () => {
-                        const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
+                        const audioBlob = new Blob(audioChunks, { type: 'audio/wewbm' });
                         const formData = new FormData();
                         formData.append('file', audioBlob, 'voice.webm');
                         const res = await fetch('/upload', { method: 'POST', body: formData });
@@ -419,10 +425,12 @@
                             content: '/' + data.path
                         });
                     };
-                      mediaRecorder.start();
+                    mediaRecorder.start();
                     isRecording = true;
                     micBtn.classList.add('recording');
-                } catch(e) { alert("Microphone error"); }
+                } catch(e) { 
+                    alert("Microphone error"); 
+                }
             } else {
                 mediaRecorder.stop();
                 isRecording = false;
