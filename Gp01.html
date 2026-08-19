@@ -1,0 +1,481 @@
+<!DOCTYPE html>
+<html lang="my">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Family Guys Chat</title>
+    <style>
+        * { box-sizing: border-box; }
+        html, body { 
+            height: 100%; 
+            margin: 0; 
+            padding: 0; 
+            overflow: hidden; 
+            font-family: sans-serif; 
+            background: #efeae2; 
+        }
+        
+        /* Login Overlay */
+        #login-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #efeae2; display: flex; align-items: center; justify-content: center; z-index: 999; }
+        .login-card { background: white; padding: 25px; border-radius: 12px; width: 90%; max-width: 340px; text-align: center; box-shadow: 0 4px 15px rgba(0,0,0,0.15); max-height: 90vh; overflow-y: auto; }
+        .login-card h3 { margin-bottom: 15px; color: #075e54; }
+        .login-card input { width: 100%; padding: 12px; margin-bottom: 12px; border: 1px solid #ccc; border-radius: 6px; outline: none; }
+        .login-card button { width: 100%; padding: 12px; background: #075e54; color: white; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; margin-top: 5px; }
+        .error-msg { color: red; font-size: 12px; margin-bottom: 10px; display: none; }
+
+        /* Main Chat UI */
+        #chat-container { 
+            display: flex; 
+            flex-direction: column; 
+            height: 100vh; 
+            height: 100dvh; 
+            position: relative;
+        }
+        
+        header { background: #075e54; color: white; padding: 10px 15px; font-size: 18px; font-weight: bold; display: flex; align-items: center; justify-content: space-between; flex-shrink: 0; }
+        .menu-btn { background: none; border: none; color: white; font-size: 22px; cursor: pointer; }
+        
+        /* Sidebar / Hamburger Menu */
+        #sidebar { position: fixed; top: 0; left: -260px; width: 260px; height: 100%; background: white; box-shadow: 2px 0 10px rgba(0,0,0,0.2); z-index: 1000; transition: left 0.3s ease; display: flex; flex-direction: column; }
+        #sidebar.open { left: 0; }
+        .sidebar-header { background: #075e54; color: white; padding: 20px; font-weight: bold; font-size: 16px; }
+        .sidebar-menu { list-style: none; padding: 0; margin: 0; overflow-y: auto; flex: 1; }
+        .sidebar-menu li { padding: 15px 20px; border-bottom: 1px solid #eee; cursor: pointer; font-size: 14px; color: #333; }
+        .sidebar-menu li:hover { background: #f0f0f0; }
+
+        #messages { 
+            flex: 1; 
+            overflow-y: auto; 
+            padding: 15px; 
+            display: flex; 
+            flex-direction: column; 
+            gap: 10px; 
+            padding-bottom: 20px; 
+        }
+        
+        /* Message Bubbles */
+        .msg-row { display: flex; align-items: flex-end; gap: 8px; max-width: 75%; position: relative; }
+        .msg-row.my-msg { margin-left: auto; flex-direction: row-reverse; }
+        .avatar { width: 36px; height: 36px; border-radius: 50%; object-fit: cover; background: #ddd; flex-shrink: 0; }
+        .bubble { background: white; padding: 10px 14px; border-radius: 8px; box-shadow: 0 1px 2px rgba(0,0,0,0.1); word-break: break-word; position: relative; }
+        .my-msg .bubble { background: #dcf8c6; }
+        .sender-name { font-size: 11px; font-weight: bold; color: #075e54; margin-bottom: 3px; }
+        .my-msg .sender-name { display: none; }
+        .del-btn { background: #ff4d4d; color: white; border: none; font-size: 10px; padding: 2px 6px; border-radius: 4px; cursor: pointer; margin-top: 5px; display: none; }
+
+        /* Media */
+        .bubble img, .bubble video { max-width: 200px; border-radius: 6px; display: block; margin-top: 5px; }
+        .bubble audio { max-width: 220px; display: block; margin-top: 5px; }
+
+        /* Footer Input */
+        .chat-footer { 
+            background: #f0f0f0; 
+            padding: 8px 12px; 
+            display: flex; 
+            align-items: center; 
+            gap: 8px; 
+            border-top: 1px solid #ddd; 
+            flex-shrink: 0; 
+            position: sticky;
+            bottom: 0;
+            width: 100%;
+            z-index: 100;
+        }
+        
+        .icon-btn { background: none; border: none; font-size: 20px; cursor: pointer; padding: 5px; color: #555; }
+        .chat-footer input[type="text"] { flex: 1; padding: 8px 12px; border: 1px solid #ccc; border-radius: 20px; outline: none; background: white; font-size: 14px; }
+        .send-btn { background: #075e54; color: white; border: none; padding: 8px 14px; border-radius: 20px; font-weight: bold; cursor: pointer; }
+        .mic-btn { background: #e51c23; color: white; border: none; width: 36px; height: 36px; border-radius: 50%; font-size: 15px; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+        .mic-btn.recording { animation: pulse 1s infinite; background: #c62828; }
+        @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.1); } 100% { transform: scale(1); } }
+
+        /* Modal Custom */
+        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 2000; align-items: center; justify-content: center; }
+        .modal-content { background: white; padding: 20px; border-radius: 8px; width: 90%; max-width: 320px; }
+        .modal-content input { width: 100%; padding: 10px; margin: 8px 0; border: 1px solid #ccc; border-radius: 4px; }
+    </style>
+</head>
+<body>
+
+    <!-- Login & Profile Setup Screen -->
+    <div id="login-overlay">
+        <div class="login-card">
+            <h3>Family Guys Chat</h3>
+            <div id="step-1">
+                <p style="font-size: 13px; color: #555; margin-bottom: 10px;">အကောင့်ဝင်ရန် Username နှင့် Password ထည့်ပါ။</p>
+                <input type="text" id="username" placeholder="Username">
+                <input type="password" id="password" placeholder="Password">
+                <div id="error-text" class="error-msg">Username သို့မဟုတ် Password မှားယွင်းနေပါသည်။</div>
+                <button onclick="checkLogin()">နောက်တစ်ဆင့်သို့</button>
+            </div>
+            
+            <div id="step-2" style="display: none;">
+                <p style="font-size: 13px; color: #555; margin-bottom: 10px;">ပြသမည့်နာမည်နှင့် Profile ပုံ သတ်မှတ်ပါ</p>
+                <input type="text" id="displayName" placeholder="ပြသမည့်နာမည်">
+                <div style="text-align: left; font-size: 12px; color: #666; margin-bottom: 3px;">Profile ပုံ ရွေးရန်:</div>
+                <input type="file" id="profilePicInput" accept="image/*" style="padding: 3px; border: none;">
+                <button onclick="completeLogin()">Groupထဲသို့ဝင်မည်</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Sidebar Menu -->
+    <div id="sidebar">
+        <div class="sidebar-header" id="sidebarTitle">Menu</div>
+        <ul class="sidebar-menu" id="sidebarMenuList">
+            <li onclick="openDirectMessageModal()">Direct Message</li>
+            <li onclick="openProfileModal()">Profile ဓာတ်ပုံနှင့် နာမည်ပြင်ရန်</li>
+            <!-- Admin Only Options -->
+            <li id="adminDeviceCheck" style="display:none;" onclick="openDeviceCheckModal()">Device Check</li>
+            <li id="adminAddUser" style="display:none;" onclick="openAddUserModal()">User အသစ်ထည့်ရန်</li>
+        </ul>
+    </div>
+
+    <!-- Chat Interface -->
+    <div id="chat-container">
+        <header>
+            <button class="menu-btn" onclick="toggleSidebar()">☰</button>
+            <span id="chatTitle">Family Guys Private Group</span>
+            <div style="width: 24px;"></div>
+        </header>
+        <div id="messages"></div>
+
+        <div class="chat-footer">
+            <label class="icon-btn" title="Profileဓာတ်ပုံတင်ရန်">📁
+                <input type="file" id="mediaInput" accept="image/*,video/*" style="display: none;" onchange="sendFile()">
+            </label>
+            <input type="text" id="msgInput" placeholder="စာရိုက်ရန်..." onkeypress="if(event.key === 'Enter') sendText()">
+            <button id="micBtn" class="mic-btn" onclick="toggleVoiceRecording()" title="အသံဖမ်းရန်">🎤</button>
+            <button class="send-btn" onclick="sendText()">Sent</button>
+        </div>
+    </div>
+
+    <!-- Profile Edit Modal -->
+    <div id="profileModal" class="modal">
+        <div class="modal-content">
+            <h3>Profile ပြင်ဆင်ရန်</h3>
+            <input type="text" id="editName" placeholder="နာမည်အသစ်">
+            <input type="file" id="editAvatar" accept="image/*">
+            <button onclick="saveProfileChanges()" style="width:100%; padding:10px; background:#075e54; color:white; border:none; border-radius:4px; margin-top:10px;">သိမ်းမည်</button>
+            <button onclick="closeModals()" style="width:100%; padding:10px; background:#ccc; border:none; border-radius:4px; margin-top:5px;">ပိတ်မည်</button>
+        </div>
+    </div>
+
+    <!-- Add User Modal (Admin) -->
+    <div id="addUserModal" class="modal">
+        <div class="modal-content">
+            <h3>User အသစ်ထည့်ရန်</h3>
+            <input type="text" id="newUsername" placeholder="Create Username">
+            <input type="password" id="newPassword" placeholder="Create Password">
+            <button onclick="submitNewUser()" style="width:100%; padding:10px; background:#075e54; color:white; border:none; border-radius:4px; margin-top:10px;">ဖန်တီးမည်</button>
+            <button onclick="closeModals()" style="width:100%; padding:10px; background:#ccc; border:none; border-radius:4px; margin-top:5px;">ပိတ်မည်</button>
+        </div>
+    </div>
+
+    <!-- Device Check Modal (Admin) -->
+    <div id="deviceCheckModal" class="modal">
+        <div class="modal-content">
+            <h3>Active Devices</h3>
+            <div id="deviceListContainer" style="max-height: 200px; overflow-y: auto; font-size: 13px; margin-bottom: 10px;"></div>
+            <button onclick="closeModals()" style="width:100%; padding:10px; background:#ccc; border:none; border-radius:4px;">ပိတ်မည်</button>
+        </div>
+    </div>
+
+    <!-- Direct Message Modal -->
+    <div id="dmModal" class="modal">
+        <div class="modal-content">
+            <h3>Direct Message သို့သွားရန်</h3>
+            <div id="dmUserList" style="max-height: 200px; overflow-y: auto; margin-bottom: 10px;"></div>
+            <button onclick="closeModals()" style="width:100%; padding:10px; background:#ccc; border:none; border-radius:4px;">ပိတ်မည်</button>
+        </div>
+    </div>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+        const socket = io();
+        let finalName = "";
+        let finalAvatar = "https://cdn-icons-png.flaticon.com/512/149/149071.png";
+        let currentRoom = "group"; // 'group' သို့မဟုတ် DM room ID
+        let activeUsersList = [];
+
+        window.addEventListener('DOMContentLoaded', () => {
+            const savedName = localStorage.getItem('fg_finalName');
+            const savedAvatar = localStorage.getItem('fg_finalAvatar');
+            if (savedName) {
+                finalName = savedName;
+                if (savedAvatar) finalAvatar = savedAvatar;
+                document.getElementById('login-overlay').style.display = 'none';
+                checkAdminUI();
+                socket.emit('join room', { room: 'group', username: finalName });
+            }
+        });
+
+        function checkAdminUI() {
+            if (finalName === "user_alpha" || finalName.startsWith("admin_")) { // Admin check
+                document.getElementById('adminDeviceCheck').style.display = 'block';
+                document.getElementById('adminAddUser').style.display = 'block';
+            }
+        }
+
+        function checkLogin() {
+            const u = document.getElementById('username').value.trim();
+            const p = document.getElementById('password').value.trim();
+            const errDiv = document.getElementById('error-text');
+
+            socket.emit('verify login', { username: u, password: p }, (res) => {
+                if (res.success) {
+                    errDiv.style.display = 'none';
+                    document.getElementById('username').value = u;
+                    document.getElementById('displayName').value = u;
+                    document.getElementById('step-1').style.display = 'none';
+                    document.getElementById('step-2').style.display = 'block';
+                } else {
+                    errDiv.style.display = 'block';
+                }
+            });
+        }
+
+        async function completeLogin() {
+            const name = document.getElementById('displayName').value.trim();
+            const fileInput = document.getElementById('profilePicInput');
+
+            if(!name) {
+                alert("သင့်၏ နာမည်ထည့်ပါ။");
+                return;
+            }
+
+            finalName = name;
+
+            if(fileInput.files.length > 0) {
+                const formData = new FormData();
+                formData.append('file', fileInput.files[0]);
+                const res = await fetch('/upload', { method: 'POST', body: formData });
+                const data = await res.json();
+                finalAvatar = '/' + data.path;
+            }
+
+            localStorage.setItem('fg_finalName', finalName);
+            localStorage.setItem('fg_finalAvatar', finalAvatar);
+
+            document.getElementById('login-overlay').style.display = 'none';
+            checkAdminUI();
+            toggleSidebar();
+            socket.emit('join room', { room: 'group', username: finalName });
+        }
+
+        function toggleSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            sidebar.classList.toggle('open');
+        }
+
+        function closeModals() {
+            document.querySelectorAll('.modal').forEach(m => m.style.display = 'none');
+        }
+
+        function openProfileModal() {
+            toggleSidebar();
+            document.getElementById('profileModal').style.display = 'flex';
+            document.getElementById('editName').value = finalName;
+        }
+
+        async function saveProfileChanges() {
+            const newName = document.getElementById('editName').value.trim();
+            const fileInput = document.getElementById('editAvatar');
+            if(newName) finalName = newName;
+
+            if(fileInput.files.length > 0) {
+                const formData = new FormData();
+                formData.append('file', fileInput.files[0]);
+                const res = await fetch('/upload', { method: 'POST', body: formData });
+                const data = await res.json();
+                finalAvatar = '/' + data.path;
+            }
+
+            localStorage.setItem('fg_finalName', finalName);
+            localStorage.setItem('fg_finalAvatar', finalAvatar);
+            closeModals();
+            alert("Profile ပြင်ဆင်ပြီးပါပြီ။");
+        }
+
+        function openAddUserModal() {
+            toggleSidebar();
+            document.getElementById('addUserModal').style.display = 'flex';
+        }
+
+        function submitNewUser() {
+            const u = document.getElementById('newUsername').value.trim();
+            const p = document.getElementById('newPassword').value.trim();
+            if(!u || !p) {
+                alert("Username နှင့် Password ထည့်ပါ။");
+                return;
+            }
+            socket.emit('add new user', { username: u, password: p }, (res) => {
+                if(res.success) {
+                    alert("User အသစ် ဖန်တီးပြီးပါပြီ။");
+                    closeModals();
+                } else {
+                    alert(res.message || "မအောင်မြင်ပါ။");
+                }
+            });
+        }
+
+        function openDeviceCheckModal() {
+            toggleSidebar();
+            socket.emit('get devices', (devices) => {
+                const container = document.getElementById('deviceListContainer');
+                container.innerHTML = "";
+                devices.forEach(d => {
+                    container.innerHTML += `<div style="padding: 5px 0; border-bottom: 1px solid #eee;"><b>${d.username}</b>: ${d.device}</div>`;
+                });
+                document.getElementById('deviceCheckModal').style.display = 'flex';
+            });
+        }
+
+        function openDirectMessageModal() {
+            toggleSidebar();
+            socket.emit('get users list', (users) => {
+                const list = document.getElementById('dmUserList');
+                list.innerHTML = "";
+                users.forEach(u => {
+                    if(u !== finalName) {
+                        list.innerHTML += `<div onclick="startDM('${u}')" style="padding: 10px; background: #f9f9f9; margin-bottom: 5px; border-radius: 4px; cursor: pointer;">💬 ${u} သို့ စာပို့ရန်</div>`;
+                    }
+                });
+                document.getElementById('dmModal').style.display = 'flex';
+            });
+        }
+
+        function startDM(targetUser) {
+            closeModals();
+            currentRoom = [finalName, targetUser].sort().join('_dm_');
+            document.getElementById('chatTitle').innerText = `DM: ${targetUser}`;
+            document.getElementById('messages').innerHTML = "";
+            socket.emit('join room', { room: currentRoom, username: finalName });
+        }
+
+        async function sendText() {
+            const msgInput = document.getElementById('msgInput');
+            const content = msgInput.value.trim();
+            if(content === "") return;
+
+            socket.emit('chat message', {
+                room: currentRoom,
+                name: finalName,
+                avatar: finalAvatar,
+                type: 'text',
+                content: content
+            });
+            msgInput.value = '';
+        }
+
+        async function sendFile() {
+            const fileInput = document.getElementById('mediaInput');
+            if(fileInput.files.length === 0) return;
+
+            const file = fileInput.files[0];
+            const formData = new FormData();
+            formData.append('file', file);
+
+            const res = await fetch('/upload', { method: 'POST', body: formData });
+            const data = await res.json();
+            const content = '/' + data.path;
+
+            let type = 'image';
+            if(file.type.startsWith('video')) type = 'video';
+
+            socket.emit('chat message', {
+                room: currentRoom,
+                name: finalName,
+                avatar: finalAvatar,
+                type: type,
+                content: content
+            });
+            fileInput.value = '';
+        }
+
+        let mediaRecorder;
+        let audioChunks = [];
+        let isRecording = false;
+
+        async function toggleVoiceRecording() {
+            const micBtn = document.getElementById('micBtn');
+            if (!isRecording) {
+                try {
+                    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                    mediaRecorder = new MediaRecorder(stream);
+                    audioChunks = [];
+                    mediaRecorder.ondataavailable = e => audioChunks.push(e.data);
+                    mediaRecorder.onstop = async () => {
+                        const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
+                        const formData = new FormData();
+                        formData.append('file', audioBlob, 'voice.webm');
+                        const res = await fetch('/upload', { method: 'POST', body: formData });
+                        const data = await res.json();
+                        socket.emit('chat message', {
+                            room: currentRoom,
+                            name: finalName,
+                            avatar: finalAvatar,
+                            type: 'audio',
+                            content: '/' + data.path
+                        });
+                    };
+                      mediaRecorder.start();
+                    isRecording = true;
+                    micBtn.classList.add('recording');
+                } catch(e) { alert("Microphone error"); }
+            } else {
+                mediaRecorder.stop();
+                isRecording = false;
+                micBtn.classList.remove('recording');
+            }
+        }
+
+        function deleteMessage(msgId) {
+            socket.emit('delete message', { room: currentRoom, id: msgId });
+        }
+
+        function appendMessage(data) {
+            const messages = document.getElementById('messages');
+            const isMyMsg = data.name === finalName;
+            const isAdmin = finalName === "user_alpha" || finalName.startsWith("admin_");
+
+            const row = document.createElement('div');
+            row.className = `msg-row ${isMyMsg ? 'my-msg' : ''}`;
+            row.id = `msg_${data.id}`;
+
+            let html = `<img src="${data.avatar}" class="avatar">`;
+            html += `<div class="bubble">`;
+            html += `<div class="sender-name">${data.name}</div>`;
+
+            if(data.type === 'image') html += `<img src="${data.content}">`;
+            else if(data.type === 'video') html += `<video src="${data.content}" controls></video>`;
+            else if(data.type === 'audio') html += `<audio src="${data.content}" controls></audio>`;
+            else html += `<div>${data.content}</div>`;
+
+            if (isAdmin) {
+                html += `<button class="del-btn" style="display:block;" onclick="deleteMessage('${data.id}')">ဖျက်မည်</button>`;
+            }
+
+            html += `</div>`;
+            row.innerHTML = html;
+            messages.appendChild(row);
+            messages.scrollTop = messages.scrollHeight;
+        }
+
+        socket.on('load history', (history) => {
+            const messages = document.getElementById('messages');
+            messages.innerHTML = '';
+            history.forEach(data => appendMessage(data));
+        });
+
+        socket.on('chat message', (data) => {
+            appendMessage(data);
+        });
+
+        socket.on('remove message', (msgId) => {
+            const el = document.getElementById(`msg_${msgId}`);
+            if(el) el.remove();
+        });
+    </script>
+</body>
+</html>
