@@ -3,107 +3,149 @@ const http = require('http');
 const { Server } = require('socket.io');
 const multer = require('multer');
 const path = require('path');
+const fs = require('fs');
 
 const app = express();
 const server = http.createServer(app);
 const io = new Server(server);
-const upload = multer({ dest: 'uploads/' });
+
+// Upload folder ဖန်တီးရန်
+const uploadDir = path.join(__dirname, 'uploads');
+if (!fs.existsSync(uploadDir)) {
+    fs.mkdirSync(uploadDir);
+}
+
+const storage = multer.diskStorage({
+    destination: (req, file, cb) => cb(null, 'uploads/'),
+    filename: (req, file, cb) => cb(null, Date.now() + '-' + file.originalname)
+});
+const upload = multer({ storage: storage });
 
 app.use(express.static(__dirname));
-app.use('/uploads', express.static('uploads'));
+app.use('/uploads', express.static(uploadDir));
 
-// Valid accounts storage (Admin can add new users dynamically)
-let validAccounts = {
-    "user_alpha": "AlphaPass#2026",
-    "user_beta": "BetaPass#2026",
-    "user_gamma": "GammaPass#2026",
-    "user_delta": "DeltaPass#2026",
-    "user_epsilon": "EpsPass#2026"
-};
+// Database သို့မဟုတ် JSON ဖိုင်အတွက် နေရာ (ဥပမာ users.json နှင့် messages.json)
+const USERS_FILE = 'users.json';
+const MESSAGES_FILE = 'messages.json';
 
-// Rooms history storage
-let roomHistories = {
-    "group": []
-};
+// Users ဒေတာဖတ်ရန်
+function getUsers() {
+    if (!fs.existsSync(USERS_FILE)) {
+        // Default admin ဖန်တီးပေးခြင်း
+        const defaultUsers = [{ username: 'user_alpha', password: '123' }];
+        fs.writeFileSync(USERS_FILE, JSON.stringify(defaultUsers, null, 2));
+    }
+    return JSON.parse(fs.readFileSync(USERS_FILE));
+}
 
-// Connected devices tracking
-let connectedDevices = {};
+function saveUsers(users) {
+    fs.writeFileSync(USERS_FILE, JSON.stringify(users, null, 2));
+}
 
-app.get('/', (req, res) => {
-    res.sendFile(path.join(__dirname, 'Gp01.html'));
-});
+// Messages သိမ်းရန်
+function getMessages() {
+    if (!fs.existsSync(MESSAGES_FILE)) {
+        fs.writeFileSync(MESSAGES_FILE, JSON.stringify([]));
+    }
+    return JSON.parse(fs.readFileSync(MESSAGES_FILE));
+}
 
+function saveMessages(messages) {
+    fs.writeFileSync(MESSAGES_FILE, JSON.stringify(messages, null, 2));
+}
+
+// Upload API Endpoint
 app.post('/upload', upload.single('file'), (req, res) => {
     if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
-    res.json({ path: req.file.path });
+    res.json({ path: `uploads/${req.file.filename}` });
 });
 
+let activeDevices = [];
+
 io.on('connection', (socket) => {
-    const userAgent = socket.handshake.headers['user-agent'] || "Unknown Device";
-    
+    console.log('A user connected:', socket.id);
+
+    // Login စစ်ဆေးခြင်း
     socket.on('verify login', ({ username, password }, callback) => {
-        if (validAccounts[username] && validAccounts[username] === password) {
-            connectedDevices[socket.id] = { username, device: userAgent };
+        const users = getUsers();
+        const user = users.find(u => u.username === username && u.password === password);
+        if (user) {
             callback({ success: true });
         } else {
             callback({ success: false });
         }
     });
 
+    // User အသစ်ထည့်ရန်
+    socket.on('add new user', ({ username, password }, callback) => {
+        const users = getUsers();
+        if (users.some(u => u.username === username)) {
+            return callback({ success: false, message: 'Username already exists' });
+        }
+        users.push({ username, password });
+        saveUsers(users);
+        callback({ success: true });
+    });
+
+    // Room ထဲဝင်ခြင်း
     socket.on('join room', ({ room, username }) => {
         socket.join(room);
-        connectedDevices[socket.id] = { username, device: userAgent };
         
-        if (!roomHistories[room]) roomHistories[room] = [];
-        socket.emit('load history', roomHistories[room]);
+        // Active devices မှတ်တမ်းတင်ရန်
+        activeDevices = activeDevices.filter(d => d.id !== socket.id);
+        activeDevices.push({ id: socket.id, username, room, device: socket.handshake.headers['user-agent'] });
+
+        // Chat History ပို့ပေးရန်
+        const messages = getMessages();
+        const roomMessages = messages.filter(m => m.room === room);
+        socket.emit('load history', roomMessages);
     });
 
-    socket.on('chat message', (msgData) => {
-        const messageId = 'msg_' + Date.now() + Math.random().toString(36).substr(2, 5);
-        const fullMsg = { ...msgData, id: messageId };
+    // စာပေးပို့ခြင်း
+    socket.on('chat message', (data) => {
+        const messages = getMessages();
+        const newMessage = {
+            id: Date.now().toString() + Math.random().toString(36.2),
+            room: data.room,
+            name: data.name,
+            avatar: data.avatar,
+            type: data.type,
+            content: data.content,
+            timestamp: Date.now()
+        };
+        messages.push(newMessage);
+        saveMessages(messages);
 
-        const room = msgData.room || 'group';
-        if (!roomHistories[room]) roomHistories[room] = [];
-        
-        roomHistories[room].push(fullMsg);
-        if (roomHistories[room].length > 150) roomHistories[room].shift();
-
-        io.to(room).emit('chat message', fullMsg);
+        io.to(data.room).emit('chat message', newMessage);
     });
 
+    // စာဖျက်ခြင်း (Admin သာ)
     socket.on('delete message', ({ room, id }) => {
-        const targetRoom = room || 'group';
-        if (roomHistories[targetRoom]) {
-            roomHistories[targetRoom] = roomHistories[targetRoom].filter(m => m.id !== id);
-            io.to(targetRoom).emit('remove message', id);
-        }
+        let messages = getMessages();
+        messages = messages.filter(m => m.id !== id);
+        saveMessages(messages);
+
+        io.to(room).emit('remove message', id);
     });
 
-    socket.on('add new user', ({ username, password }, callback) => {
-        if (validAccounts[username]) {
-            callback({ success: false, message: 'User already exists' });
-        } else {
-            validAccounts[username] = password;
-            callback({ success: true });
-        }
-    });
-
+    // Active devices စစ်ဆေးရန်
     socket.on('get devices', (callback) => {
-        const list = Object.values(connectedDevices);
-        callback(list);
+        callback(activeDevices);
     });
 
+    // Users စာရင်းထုတ်ပေးရန် (DM အတွက်)
     socket.on('get users list', (callback) => {
-        callback(Object.keys(validAccounts));
+        const users = getUsers();
+        callback(users.map(u => u.username));
     });
 
     socket.on('disconnect', () => {
-        delete connectedDevices[socket.id];
+        activeDevices = activeDevices.filter(d => d.id !== socket.id);
+        console.log('User disconnected:', socket.id);
     });
 });
 
-// Railway နှင့် ချိတ်ဆက်ရန် Port ကို မှန်ကန်စွာ သတ်မှတ်ခြင်း
-const PORT = process.env.PORT || 8080;
-server.listen(PORT, '0.0.0.0', () => {
-    console.log(`Server running on port ${PORT}`);
+const PORT = process.env.PORT || 3000;
+server.listen(PORT, () => {
+    console.log(`Server is running on port ${PORT}`);
 });
