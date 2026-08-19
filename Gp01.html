@@ -2,7 +2,7 @@
 <html lang="my">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=devic<!DOCth, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Family Guys Chat</title>
     <style>
         * { box-sizing: border-box; }
@@ -205,7 +205,8 @@
         });
 
         function checkAdminUI() {
-            if (finalName === "user_alpha" || finalName.startsWith("admin_")) {
+            // Admin စစ်ဆေးရာတွင် စာလုံးအသေး/အကြီး မမှားစေရန် .toLowerCase() ထည့်ထားပါသည်
+            if (finalName.toLowerCase() === "user_alpha" || finalName.toLowerCase().startsWith("admin_")) {
                 document.getElementById('adminDeviceCheck').style.display = 'block';
                 document.getElementById('adminAddUser').style.display = 'block';
             }
@@ -411,9 +412,9 @@
             if (!isRecording) {
                 try {
                     const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-                    mediaRecorder = new MediaRecorder(stream);
+                    mediaRecorder = new MedMediaRecorder(stream);
                     audioChunks = [];
-                    mediaRecorder.ondataavailable = MediaRecorder = e => audioChunks.push(e.data);
+                    mediaRecorder.ondataavailable = e => audioChunks.push(e.data);
                     mediaRecorder.onstop = async () => {
                         const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
                         const formData = new FormData();
@@ -448,7 +449,7 @@
         function appendMessage(data) {
             const messages = document.getElementById('messages');
             const isMyMsg = data.name === finalName;
-            const isAdmin = finalName === "user_alpha" || finalName.startsWith("admin_");
+            const isAdmin = finalName.toLowerCase() === "user_alpha" || finalName.toLowerCase().startsWith("admin_");
 
             const row = document.createElement('div');
             row.className = `msg-row ${isMyMsg ? 'my-msg' : ''}`;
