@@ -102,7 +102,8 @@ io.on('connection', (socket) => {
     });
 });
 
-const PORT = process.env.PORT || 3000;
+// Railway နှင့် ချိတ်ဆက်ရန် Port ကို မှန်ကန်စွာ သတ်မှတ်ခြင်း
+const PORT = process.env.PORT || 8080;
 server.listen(PORT, '0.0.0.0', () => {
     console.log(`Server running on port ${PORT}`);
 });
