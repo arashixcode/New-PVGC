@@ -21,7 +21,7 @@ const storage = multer.diskStorage({
 });
 const upload = multer({ storage: storage });
 
-app.use(express.static(__dirname));
+app.use(express.static(path.join(__dirname)));
 app.use('/uploads', express.static(uploadDir));
 
 // Website ဝင်လာလျှင် Gp01.html ကို ပထမဆုံးပြရန်
@@ -33,7 +33,7 @@ app.get('/', (req, res) => {
 const USERS_FILE = 'users.json';
 const MESSAGES_FILE = 'messages.json';
 
-// Users ဒေတာဖတ်ရန် (ပေးထားသော User စာရင်းအသစ်အတိုင်း)
+// Users ဒေတာဖတ်ရန်
 function getUsers() {
     if (!fs.existsSync(USERS_FILE)) {
         const defaultUsers = [
@@ -146,7 +146,7 @@ io.on('connection', (socket) => {
         callback(activeDevices);
     });
 
-    // Users စာရင်း အပြည့်အစုံထုတ်ပေးရန် (DM အတွက်)
+    // Users စာရင်း အပြည့်အစုံထုတ်ပေးရန်
     socket.on('get users list', (callback) => {
         const users = getUsers();
         callback(users.map(u => u.username));
@@ -158,7 +158,7 @@ io.on('connection', (socket) => {
     });
 });
 
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 8080;
 server.listen(PORT, '0.0.0.0', () => {
     console.log(`Server is running on port ${PORT}`);
 });
