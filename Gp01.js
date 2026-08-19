@@ -24,6 +24,11 @@ const upload = multer({ storage: storage });
 app.use(express.static(__dirname));
 app.use('/uploads', express.static(uploadDir));
 
+// Website ဝင်လာလျှင် Gp01.html ကို ပထမဆုံးပြရန်
+app.get('/', (req, res) => {
+    res.sendFile(path.join(__dirname, 'Gp01.html'));
+});
+
 // Database ဖိုင်များ
 const USERS_FILE = 'users.json';
 const MESSAGES_FILE = 'messages.json';
