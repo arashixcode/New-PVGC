@@ -488,6 +488,16 @@
             const el = document.getElementById(`msg_${msgId}`);
             if(el) el.remove();
         });
+        // Admin Menu ပေါ်စေရန် ထည့်သွင်းရမည့် ကုဒ်
+if (currentUser === 'User_alpha') {
+    const menuItems = document.querySelector('.menu-items'); // သင့်ရဲ့ Menu တွေထဲက နေရာတစ်ခု
+    if (menuItems) {
+        const adminLi = document.createElement('div');
+        adminLi.innerHTML = `<a href="#" onclick="openAddUserModal()">User အသစ်ထည့်ရန်</a>`;
+        menuItems.appendChild(adminLi);
+    }
+}
+        
     </script>
 </body>
 </html>
