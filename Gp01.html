@@ -489,27 +489,47 @@
             if(el) el.remove();
         });
         
-// Sidebar Menu ထဲသို့ Logout ခလုတ် အလိုအလျောက် ထည့်ရန်
-window.addEventListener('DOMContentLoaded', () => {
-    const menuList = document.getElementById('sidebarMenuList');
-    if (menuList && !document.getElementById('logoutMenuItem')) {
-        const logoutLi = document.createElement('li');
-        logoutLi.id = 'logoutMenuItem';
-        logoutLi.innerHTML = `အကောင့်ထွက်ရန် (Log Out)`;
-        logoutLi.style.color = '#d9534f';
-        logoutLi.style.fontWeight = 'bold';
-        logoutLi.onclick = logoutUser;
-        menuList.appendChild(logoutLi);
+let loggedInUsername = "";
+
+function checkLogin() {
+    const u = document.getElementById('username').value.trim();
+    const p = document.getElementById('password').value.trim();
+    const errDiv = document.getElementById('error-text');
+
+    socket.emit('verify login', { username: u, password: p }, (res) => {
+        if (res.success) {
+            loggedInUsername = u; 
+            errDiv.style.display = 'none';
+            document.getElementById('username').value = u;
+            document.getElementById('displayName').value = u;
+            document.getElementById('step-1').style.display = 'none';
+            document.getElementById('step-2').style.display = 'block';
+            checkAdminUI();
+        } else {
+            errDiv.style.display = 'block';
+        }
+    });
+}
+
+function checkAdminUI() {
+    if (loggedInUsername.toLowerCase() === "user_alpha" || loggedInUsername.toLowerCase().startsWith("admin_")) {
+        document.getElementById('adminDeviceCheck').style.display = 'block';
+        document.getElementById('adminAddUser').style.display = 'block';
+    } else {
+        document.getElementById('adminDeviceCheck').style.display = 'none';
+        document.getElementById('adminAddUser').style.display = 'none';
     }
-});
+}
 
 function logoutUser() {
     if (confirm("အကောင့်မှ ထွက်မှာ သေချာပါသလား?")) {
         localStorage.removeItem('fg_finalName');
         localStorage.removeItem('fg_finalAvatar');
+        localStorage.removeItem('fg_loggedInUser');
         location.reload();
     }
 }
+
         
         
     </script>
