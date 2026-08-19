@@ -488,12 +488,29 @@
             const el = document.getElementById(`msg_${msgId}`);
             if(el) el.remove();
         });
-        // Admin Menu ပေါ်စေရန် ထည့်သွင်းရမည့် ကုဒ် (ဒီကုဒ်ကို ဖျက်ပါ)
-if (currentUser === 'User_alpha') {
-    const menuItems = document.querySelector('.menu-items'); 
-    ...
-}
+        
+// Sidebar Menu ထဲသို့ Logout ခလုတ် အလိုအလျောက် ထည့်ရန်
+window.addEventListener('DOMContentLoaded', () => {
+    const menuList = document.getElementById('sidebarMenuList');
+    if (menuList && !document.getElementById('logoutMenuItem')) {
+        const logoutLi = document.createElement('li');
+        logoutLi.id = 'logoutMenuItem';
+        logoutLi.innerHTML = `အကောင့်ထွက်ရန် (Log Out)`;
+        logoutLi.style.color = '#d9534f';
+        logoutLi.style.fontWeight = 'bold';
+        logoutLi.onclick = logoutUser;
+        menuList.appendChild(logoutLi);
+    }
+});
 
+function logoutUser() {
+    if (confirm("အကောင့်မှ ထွက်မှာ သေချာပါသလား?")) {
+        localStorage.removeItem('fg_finalName');
+        localStorage.removeItem('fg_finalAvatar');
+        location.reload();
+    }
+}
+        
         
     </script>
 </body>
