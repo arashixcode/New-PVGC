@@ -33,7 +33,6 @@ app.get('/', (req, res) => {
 const USERS_FILE = 'users.json';
 const MESSAGES_FILE = 'messages.json';
 
-// Users ဒေတာဖတ်ရန်
 function getUsers() {
     if (!fs.existsSync(USERS_FILE)) {
         const defaultUsers = [
@@ -57,7 +56,6 @@ function saveUsers(users) {
     fs.writeFileSync(USERS_FILE, JSON.stringify(users, null, 2));
 }
 
-// Messages သိမ်းရန်
 function getMessages() {
     if (!fs.existsSync(MESSAGES_FILE)) {
         fs.writeFileSync(MESSAGES_FILE, JSON.stringify([]));
@@ -69,13 +67,13 @@ function saveMessages(messages) {
     fs.writeFileSync(MESSAGES_FILE, JSON.stringify(messages, null, 2));
 }
 
-// Upload API Endpoint
 app.post('/upload', upload.single('file'), (req, res) => {
     if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
     res.json({ path: `uploads/${req.file.filename}` });
 });
 
 let activeDevices = [];
+let onlineUsers = {}; // Online status တွေအတွက် သိမ်းဆည်းရန်
 
 io.on('connection', (socket) => {
     console.log('A user connected:', socket.id);
@@ -102,6 +100,19 @@ io.on('connection', (socket) => {
         callback({ success: true });
     });
 
+    // User Online ဝင်ရောက်လာခြင်းနှင့် Status သတ်မှတ်ခြင်း
+    socket.on('user online', (data) => {
+        if (data && data.username) {
+            onlineUsers[data.username] = {
+                socketId: socket.id,
+                username: data.username,
+                displayName: data.displayName || data.username,
+                isOnline: true
+            };
+            io.emit('update online users', onlineUsers);
+        }
+    });
+
     // Room ထဲဝင်ခြင်း
     socket.on('join room', ({ room, username }) => {
         socket.join(room);
@@ -120,6 +131,7 @@ io.on('connection', (socket) => {
         const newMessage = {
             id: Date.now().toString() + Math.random().toString(36).substring(2),
             room: data.room,
+            loginUser: data.loginUser,
             name: data.name,
             avatar: data.avatar,
             type: data.type,
@@ -130,6 +142,14 @@ io.on('connection', (socket) => {
         saveMessages(messages);
 
         io.to(data.room).emit('chat message', newMessage);
+    });
+
+    // Profile / နာမည်ပြောင်းလဲခြင်း (Real-time Name Update)
+    socket.on('update profile', (data) => {
+        if (onlineUsers[data.username]) {
+            onlineUsers[data.username].displayName = data.displayName;
+        }
+        io.emit('update online users', onlineUsers);
     });
 
     // စာဖျက်ခြင်း (Admin သာ)
@@ -146,13 +166,21 @@ io.on('connection', (socket) => {
         callback(activeDevices);
     });
 
-    // Users စာရင်း အပြည့်အစုံထုတ်ပေးရန်
-    socket.on('get users list', (callback) => {
-        const users = getUsers();
-        callback(users.map(u => u.username));
+    // Online ရှိနေသူများစာရင်း (DM အတွက် 🟢/🔴 ပြသရန်)
+    socket.on('get online users', (callback) => {
+        let usersList = Object.values(onlineUsers);
+        callback(usersList);
     });
 
     socket.on('disconnect', () => {
+        for (let username in onlineUsers) {
+            if (onlineUsers[username].socketId === socket.id) {
+                onlineUsers[username].isOnline = false;
+                break;
+            }
+        }
+        io.emit('update online users', onlineUsers);
+        
         activeDevices = activeDevices.filter(d => d.id !== socket.id);
         console.log('User disconnected:', socket.id);
     });
