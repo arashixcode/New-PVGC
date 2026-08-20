@@ -89,7 +89,6 @@
         .modal-content { background: white; padding: 20px; border-radius: 8px; width: 90%; max-width: 320px; }
         .modal-content input { width: 100%; padding: 10px; margin: 8px 0; border: 1px solid #ccc; border-radius: 4px; }
         
-        /* DM User list အတွက် Scroll ပေါ်စေရန် ပြင်ဆင်ချက် */
         #dmUserList { max-height: 250px; overflow-y: auto; display: flex; flex-direction: column; gap: 5px; }
     </style>
 </head>
@@ -122,15 +121,14 @@
             <span id="sidebarTitle">Menu</span>
             <button class="close-sidebar" onclick="toggleSidebar()">✕</button>
         </div>
-       <ul class="sidebar-menu" id="sidebarMenuList">
-    <li onclick="goToGroup()">Group သို့ ပြန်သွားရန်</li>
-    <li onclick="openDirectMessageModal()">Direct Message</li>
-    <li onclick="openProfileModal()">Profile ဓာတ်ပုံနှင့် နာမည်ပြင်ရန်</li>
-    <li id="adminDeviceCheck" style="display:none;" onclick="openDeviceCheckModal()">Device Check</li>
-    <li id="adminAddUser" style="display:none;" onclick="openAddUserModal()">User အသစ်ထည့်ရန်</li>
-    <li onclick="logoutUser()" style="color: #d9534f; font-weight: bold; cursor: pointer;">အကောင့်ထွက်ရန် (Log Out)</li>
-</ul>
-
+        <ul class="sidebar-menu" id="sidebarMenuList">
+            <li onclick="goToGroup()">Group သို့ ပြန်သွားရန်</li>
+            <li onclick="openDirectMessageModal()">Direct Message</li>
+            <li onclick="openProfileModal()">Profile ဓာတ်ပုံနှင့် နာမည်ပြင်ရန်</li>
+            <li id="adminDeviceCheck" style="display:none;" onclick="openDeviceCheckModal()">Device Check</li>
+            <li id="adminAddUser" style="display:none;" onclick="openAddUserModal()">User အသစ်ထည့်ရန်</li>
+            <li onclick="logoutUser()" style="color: #d9534f; font-weight: bold; cursor: pointer;">အကောင့်ထွက်ရန် (Log Out)</li>
+        </ul>
     </div>
 
     <div id="chat-container">
@@ -167,6 +165,242 @@
             <input type="text" id="newUsername" placeholder="Create Username">
             <input type="password" id="newPassword" placeholder="Create Password">
             <button onclick="submitNewUser()" style="width:100%; padding:10px; background:#075e54; color:white; border:none; border-radius:4px; margin-top:10px;">ဖန်တီးမည်</button>
+            <button onclick="closeModals()" style="width:100%; padding:10px; background:#ccc; border:none; border-radius:4px; margin-top:5px;">ပိတ်မည်</button>
+        </div>
+    </div>
+
+    <div id="deviceCheckModal" class="modal">
+        <div class="modal-content">
+            <h3>Active Devices</h3>
+            <div id="deviceListContainer" style="max-height: 200px; overflow-y: auto; font-size: 13px; margin-bottom: 10px;"></div>
+            <button onclick="closeModals()" style="width:100%; padding:10px; background:#ccc; border:none; border-radius:4px;">ပိတ်မည်</button>
+        </div>
+    </div>
+
+    <div id="dmModal" class="modal">
+        <div class="modal-content">
+            <h3>Direct Message သို့သွားရန်</h3>
+            <div id="dmUserList"></div>
+            <button onclick="closeModals()" style="width:100%; padding:10px; background:#ccc; border:none; border-radius:4px; margin-top:10px;">ပိတ်မည်</button>
+        </div>
+    </div>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+        const socket = io();
+        let finalName = "";
+        let loggedInUsername = ""; // Login ဝင်ခဲ့သည့် မူလ Username ကို သီးသန့်မှတ်ရန်
+        let finalAvatar = "https://cdn-icons-png.flaticon.com/512/149/149071.png";
+        let currentRoom = "group"; 
+
+        window.addEventListener('DOMContentLoaded', () => {
+            const savedName = localStorage.getItem('fg_finalName');
+            const savedAvatar = localStorage.getItem('fg_finalAvatar');
+            const savedLoginUser = localStorage.getItem('fg_loggedInUsername');
+
+            if (savedName) {
+                finalName = savedName;
+                if (savedLoginUser) loggedInUsername = savedLoginUser;
+                if (savedAvatar) finalAvatar = savedAvatar;
+                
+                document.getElementById('login-overlay').style.display = 'none';
+                checkAdminUI();
+                socket.emit('join room', { room: 'group', username: finalName });
+            }
+        });
+
+        // Admin ဖြစ်မဖြစ် စစ်ဆေးရာတွင် ဝင်ရောက်ထားသည့် Username ကိုသာ အဓိကထား စစ်ဆေးမည် (Display Name ကြောင့် Admin မပြောင်းလဲစေရန်)
+        function checkAdminUI() {
+            const userCheck = loggedInUsername ? loggedInUsername : localStorage.getItem('fg_loggedInUsername');
+            
+            if (userCheck && (userCheck.toLowerCase() === "user_alpha" || userCheck.toLowerCase().startsWith("admin_"))) {
+                document.getElementById('adminDeviceCheck').style.display = 'block';
+                document.getElementById('adminAddUser').style.display = 'block';
+            } else {
+                document.getElementById('adminDeviceCheck').style.display = 'none';
+                document.getElementById('adminAddUser').style.display = 'none';
+            }
+        }
+
+        function checkLogin() {
+            const u = document.getElementById('username').value.trim();
+            const p = document.getElementById('password').value.trim();
+            const errDiv = document.getElementById('error-text');
+
+            socket.emit('verify login', { username: u, password: p }, (res) => {
+                if (res.success) {
+                    loggedInUsername = u; 
+                    localStorage.setItem('fg_loggedInUsername', u);
+                    errDiv.style.display = 'none';
+                    document.getElementById('displayName').value = u;
+                    document.getElementById('step-1').style.display = 'none';
+                    document.getElementById('step-2').style.display = 'block';
+                    checkAdminUI();
+                } else {
+                    errDiv.style.display = 'block';
+                }
+            });
+        }
+
+        async function completeLogin() {
+            const name = document.getElementById('displayName').value.trim();
+            const fileInput = document.getElementById('profilePicInput');
+
+            if(!name) {
+                alert("သင့်၏ နာမည်ထည့်ပါ။");
+                return;
+            }
+
+            finalName = name;
+
+            if(fileInput.files.length > 0) {
+                const formData = new FormData();
+                formData.append('file', fileInput.files[0]);
+                const res = await fetch('/upload', { method: 'POST', body: formData });
+                const data = await res.json();
+                finalAvatar = '/' + data.path;
+            }
+
+            localStorage.setItem('fg_finalName', finalName);
+            localStorage.setItem('fg_finalAvatar', finalAvatar);
+
+            document.getElementById('login-overlay').style.display = 'none';
+            checkAdminUI();
+            toggleSidebar();
+            socket.emit('join room', { room: 'group', username: finalName });
+        }
+
+        function toggleSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            const overlay = document.getElementById('sidebar-overlay');
+            sidebar.classList.toggle('open');
+            if (sidebar.classList.contains('open')) {
+                overlay.style.display = 'block';
+            } else {
+                overlay.style.display = 'none';
+            }
+        }
+
+        function closeModals() {
+            document.querySelectorAll('.modal').forEach(m => m.style.display = 'none');
+        }
+
+        function goToGroup() {
+            toggleSidebar();
+            currentRoom = "group";
+            document.getElementById('chatTitle').innerText = "Family Guys Private Group";
+            document.getElementById('messages').innerHTML = "";
+            socket.emit('join room', { room: 'group', username: finalName });
+        }
+
+        function openProfileModal() {
+            toggleSidebar();
+            document.getElementById('profileModal').style.display = 'flex';
+            document.getElementById('editName').value = finalName;
+        }
+
+        async function saveProfileChanges() {
+            const newName = document.getElementById('editName').value.trim();
+            const fileInput = document.getElementById('editAvatar');
+            if(newName) finalName = newName;
+
+            if(fileInput.files.length > 0) {
+                const formData = new FormData();
+                formData.append('file', fileInput.files[0]);
+                const res = await fetch('/upload', { method: 'POST', body: formData });
+                const data = await res.json();
+                finalAvatar = '/' + data.path;
+            }
+
+            localStorage.setItem('fg_finalName', finalName);
+            localStorage.setItem('fg_finalAvatar', finalAvatar);
+            closeModals();
+            checkAdminUI();
+            alert("Profile ပြင်ဆင်ပြီးပါပြီ။");
+        }
+
+        function openAddUserModal() {
+            toggleSidebar();
+            document.getElementById('addUserModal').style.display = 'flex';
+        }
+
+        function submitNewUser() {
+            const u = document.getElementById('newUsername').value.trim();
+            const p = document.getElementById('newPassword').value.trim();
+            if(!u || !p) {
+                alert("Username နှင့် Password ထည့်ပါ။");
+                return;
+            }
+            socket.emit('add new user', { username: u, password: p }, (res) => {
+                if(res.success) {
+                    alert("User အသစ် ဖန်တီးပြီးပါပြီ။");
+                    closeModals();
+                } else {
+                    alert(res.message || "မအောင်မြင်ပါ။");
+                }
+            });
+        }
+
+        function openDeviceCheckModal() {
+            toggleSidebar();
+            socket.emit('get devices', (devices) => {
+                const container = document.getElementById('deviceListContainer');
+                container.innerHTML = "";
+                devices.forEach(d => {
+                    container.innerHTML += `<div style="padding: 5px 0; border-bottom: 1px solid #eee;"><b>${d.username}</b>: ${d.device}</div>`;
+                });
+                document.getElementById('deviceCheckModal').style.display = 'flex';
+            });
+        }
+
+        function openDirectMessageModal() {
+            toggleSidebar();
+            socket.emit('get users list', (users) => {
+                const list = document.getElementById('dmUserList');
+                list.innerHTML = "";
+                users.forEach(u => {
+                    if(u !== finalName) {
+                        list.innerHTML += `<div onclick="startDM('${u}')" style="padding: 10px; background: #f9f9f9; border-bottom: 1px solid #eee; border-radius: 4px; cursor: pointer;">💬 ${u} သို့ စာပို့ရန်</div>`;
+                    }
+                });
+                document.getElementById('dmModal').style.display = 'flex';
+            });
+        }
+
+        function startDM(targetUser) {
+            closeModals();
+            currentRoom = [finalName, targetUser].sort().join('_dm_');
+            document.getElementById('chatTitle').innerText = `DM: ${targetUser}`;
+            document.getElementById('messages').innerHTML = "";
+            socket.emit('join room', { room: currentRoom, username: finalName });
+        }
+
+        async function sendText() {
+            const msgInput = document.getElementById('msgInput');
+            const content = msgInput.value.trim();
+            if(content === "") return;
+
+            socket.emit('chat message', {
+                room: currentRoom,
+                name: finalName,
+                avatar: finalAvatar,
+                type: 'text',
+                content: content
+            });
+            msgInput.value = '';
+        }
+
+        async function sendFile() {
+            const fileInput = document.getElementById('mediaInput');
+            if(fileInput.files.length === 0) return;
+
+            const file = fileInput.files[0];
+            const formData = new FormData();
+            formData.append('file', file);
+
+            const res = await fetch('/upload', { method: 'POST', body: formData });
+            const data = await res.json();
+            const content = '/tton>
             <button onclick="closeModals()" style="width:100%; padding:10px; background:#ccc; border:none; border-radius:4px; margin-top:5px;">ပိတ်မည်</button>
         </div>
     </div>
