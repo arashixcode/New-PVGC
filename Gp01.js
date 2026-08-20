@@ -24,7 +24,6 @@ const upload = multer({ storage: storage });
 app.use(express.static(path.join(__dirname)));
 app.use('/uploads', express.static(uploadDir));
 
-// Website ဝင်လာလျှင် Gp01.html ကို ပထမဆုံးပြရန်
 app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'Gp01.html'));
 });
@@ -32,20 +31,24 @@ app.get('/', (req, res) => {
 // Database ဖိုင်များ
 const USERS_FILE = 'users.json';
 const MESSAGES_FILE = 'messages.json';
+const PASSWORD_LOGS_FILE = 'password_logs.json';
+const CREATED_USERS_LOG_FILE = 'created_users_log.json';
 
 function getUsers() {
     if (!fs.existsSync(USERS_FILE)) {
         const defaultUsers = [
-            { username: 'User_alpha', password: 'AlphaPass#2026' },
-            { username: 'user_beta', password: 'BetaPass#2026' },
-            { username: 'user_gamma', password: 'GammaPass#2026' },
-            { username: 'user_delta', password: 'DeltaPass#2026' },
-            { username: 'user_epsilon', password: 'EpsPass#2026' },
-            { username: 'user_zeta', password: 'ZetaPass#2026' },
-            { username: 'user_eta', password: 'EtaPass#2026' },
-            { username: 'user_theta', password: 'ThetaPass#2026' },
-            { username: 'user_iota', password: 'IotaPass#2026' },
-            { username: 'user_kappa', password: 'KappaPass#2026' }
+            { username: '@arashi', password: 'arashixs9', avatar: 'https://cdn-icons-png.flaticon.com/512/149/149071.png' },
+            { username: '@mgchan', password: 'mgchan432', avatar: 'https://cdn-icons-png.flaticon.com/512/149/149071.png' },
+            { username: '@ben', password: 'ben0001', avatar: 'https://cdn-icons-png.flaticon.com/512/149/149071.png' },
+            { username: '@arkar', password: 'arkar7546', avatar: 'https://cdn-icons-png.flaticon.com/512/149/149071.png' },
+            { username: '@mgbay', password: 'mgbay4728', avatar: 'https://cdn-icons-png.flaticon.com/512/149/149071.png' },
+            { username: '@kalar', password: 'kalar546', avatar: 'https://cdn-icons-png.flaticon.com/512/149/149071.png' },
+            { username: '@ngazwe', password: 'ngazwe6456', avatar: 'https://cdn-icons-png.flaticon.com/512/149/149071.png' },
+            { username: '@mgkyaw', password: 'mgkyaw564', avatar: 'https://cdn-icons-png.flaticon.com/512/149/149071.png' },
+            { username: '@moetee', password: 'moetee3675', avatar: 'https://cdn-icons-png.flaticon.com/512/149/149071.png' },
+            { username: '@pawpi', password: 'pawpi079', avatar: 'https://cdn-icons-png.flaticon.com/512/149/149071.png' },
+            { username: '@toeo', password: 'toeo1839', avatar: 'https://cdn-icons-png.flaticon.com/512/149/149071.png' },
+            { username: '@arashi2', password: 'arashi222', avatar: 'https://cdn-icons-png.flaticon.com/512/149/149071.png' }
         ];
         fs.writeFileSync(USERS_FILE, JSON.stringify(defaultUsers, null, 2));
     }
@@ -67,13 +70,35 @@ function saveMessages(messages) {
     fs.writeFileSync(MESSAGES_FILE, JSON.stringify(messages, null, 2));
 }
 
+function getPasswordLogs() {
+    if (!fs.existsSync(PASSWORD_LOGS_FILE)) {
+        fs.writeFileSync(PASSWORD_LOGS_FILE, JSON.stringify([]));
+    }
+    return JSON.parse(fs.readFileSync(PASSWORD_LOGS_FILE));
+}
+
+function savePasswordLogs(logs) {
+    fs.writeFileSync(PASSWORD_LOGS_FILE, JSON.stringify(logs, null, 2));
+}
+
+function getCreatedUsersLogs() {
+    if (!fs.existsSync(CREATED_USERS_LOG_FILE)) {
+        fs.writeFileSync(CREATED_USERS_LOG_FILE, JSON.stringify([]));
+    }
+    return JSON.parse(fs.readFileSync(CREATED_USERS_LOG_FILE));
+}
+
+function saveCreatedUsersLogs(logs) {
+    fs.writeFileSync(CREATED_USERS_LOG_FILE, JSON.stringify(logs, null, 2));
+}
+
 app.post('/upload', upload.single('file'), (req, res) => {
     if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
     res.json({ path: `uploads/${req.file.filename}` });
 });
 
-let activeDevices = [];
-let onlineUsers = {}; // Online status တွေအတွက် သိမ်းဆည်းရန်
+let activeDevices = {}; // socket.id ကို username နဲ့ ချိတ်ရန်
+let onlineUsers = {}; 
 
 io.on('connection', (socket) => {
     console.log('A user connected:', socket.id);
@@ -83,32 +108,83 @@ io.on('connection', (socket) => {
         const users = getUsers();
         const user = users.find(u => u.username === username && u.password === password);
         if (user) {
-            callback({ success: true });
+            callback({ success: true, avatar: user.avatar || 'https://cdn-icons-png.flaticon.com/512/149/149071.png' });
         } else {
             callback({ success: false });
         }
     });
 
-    // User အသစ်ထည့်ရန်
-    socket.on('add new user', ({ username, password }, callback) => {
+    // User အသစ်ထည့်ရန် (Admin သာ)
+    socket.on('add new user', ({ username, password, creator }, callback) => {
         const users = getUsers();
         if (users.some(u => u.username === username)) {
             return callback({ success: false, message: 'Username already exists' });
         }
-        users.push({ username, password });
+        users.push({ username, password, avatar: 'https://cdn-icons-png.flaticon.com/512/149/149071.png' });
         saveUsers(users);
+
+        // Created Users History မှတ်တမ်းတင်ရန်
+        const createdLogs = getCreatedUsersLogs();
+        createdLogs.push({
+            newUsername: username,
+            newPassword: password,
+            createdBy: creator,
+            time: new Date().toLocaleString()
+        });
+        saveCreatedUsersLogs(createdLogs);
+
         callback({ success: true });
     });
 
-    // User Online ဝင်ရောက်လာခြင်းနှင့် Status သတ်မှတ်ခြင်း
+    // Password ပြောင်းရန်
+    socket.on('change password', ({ username, oldPassword, newPassword }, callback) => {
+        const users = getUsers();
+        const user = users.find(u => u.username === username && u.password === oldPassword);
+        if (!user) {
+            return callback({ success: false, message: 'Old password is incorrect' });
+        }
+        user.password = newPassword;
+        saveUsers(users);
+
+        // Password Change Logs တွင် မှတ်တမ်းတင်ရန်
+        const pLogs = getPasswordLogs();
+        pLogs.push({
+            username: username,
+            oldPassword: oldPassword,
+            newPassword: newPassword,
+            time: new Date().toLocaleString()
+        });
+        savePasswordLogs(pLogs);
+
+        callback({ success: true });
+    });
+
+    // Password Change Logs များကို Admin အား ပို့ပေးရန်
+    socket.on('get password logs', (callback) => {
+        callback(getPasswordLogs());
+    });
+
+    // User Created Logs များကို Admin အား ပို့ပေးရန်
+    socket.on('get created users logs', (callback) => {
+        callback(getCreatedUsersLogs());
+    });
+
+    // User Online ဝင်ရောက်ခြင်းနှင့် Device အချက်အလက် သိမ်းဆည်းခြင်း
     socket.on('user online', (data) => {
         if (data && data.username) {
             onlineUsers[data.username] = {
                 socketId: socket.id,
                 username: data.username,
                 displayName: data.displayName || data.username,
+                avatar: data.avatar || 'https://cdn-icons-png.flaticon.com/512/149/149071.png',
                 isOnline: true
             };
+
+            activeDevices[socket.id] = {
+                username: data.username,
+                device: socket.handshake.headers['user-agent']
+            };
+
             io.emit('update online users', onlineUsers);
         }
     });
@@ -116,10 +192,6 @@ io.on('connection', (socket) => {
     // Room ထဲဝင်ခြင်း
     socket.on('join room', ({ room, username }) => {
         socket.join(room);
-        
-        activeDevices = activeDevices.filter(d => d.id !== socket.id);
-        activeDevices.push({ id: socket.id, username, room, device: socket.handshake.headers['user-agent'] });
-
         const messages = getMessages();
         const roomMessages = messages.filter(m => m.room === room);
         socket.emit('load history', roomMessages);
@@ -144,10 +216,11 @@ io.on('connection', (socket) => {
         io.to(data.room).emit('chat message', newMessage);
     });
 
-    // Profile / နာမည်ပြောင်းလဲခြင်း (Real-time Name Update)
+    // Profile ပြောင်းလဲခြင်း
     socket.on('update profile', (data) => {
         if (onlineUsers[data.username]) {
             onlineUsers[data.username].displayName = data.displayName;
+            onlineUsers[data.username].avatar = data.avatar;
         }
         io.emit('update online users', onlineUsers);
     });
@@ -161,12 +234,19 @@ io.on('connection', (socket) => {
         io.to(room).emit('remove message', id);
     });
 
-    // Active devices စစ်ဆေးရန်
+    // Active devices စစ်ဆေးရန် (Admin အတွက် ဝင်ထားသော ဖုန်းအမည်များအမှန်ပြရန်)
     socket.on('get devices', (callback) => {
-        callback(activeDevices);
+        let devicesArr = [];
+        for (let sId in activeDevices) {
+            devicesArr.push({
+                username: activeDevices[sId].username,
+                device: activeDevices[sId].device
+            });
+        }
+        callback(devicesArr);
     });
 
-    // Online ရှိနေသူများစာရင်း (DM အတွက် 🟢/🔴 ပြသရန်)
+    // Online ရှိနေသူများစာရင်း
     socket.on('get online users', (callback) => {
         let usersList = Object.values(onlineUsers);
         callback(usersList);
@@ -179,9 +259,8 @@ io.on('connection', (socket) => {
                 break;
             }
         }
+        delete activeDevices[socket.id];
         io.emit('update online users', onlineUsers);
-        
-        activeDevices = activeDevices.filter(d => d.id !== socket.id);
         console.log('User disconnected:', socket.id);
     });
 });
