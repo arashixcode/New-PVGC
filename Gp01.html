@@ -24,12 +24,13 @@
 
         #chat-container { display: flex; flex-direction: column; height: 100vh; height: 100dvh; position: relative; }
         
-        header { background: #075e54; color: white; padding: 10px 15px; font-size: 18px; font-weight: bold; display: flex; align-items: center; justify-content: space-between; flex-shrink: 0; }
-        .header-right { display: flex; align-items: center; gap: 10px; }
-        .menu-btn, .notif-btn { background: none; border: none; color: white; font-size: 20px; cursor: pointer; }
+        header { background: #075e54; color: white; padding: 10px 15px; font-size: 16px; font-weight: bold; display: flex; align-items: center; justify-content: space-between; flex-shrink: 0; }
+        .header-title-area { display: flex; align-items: center; gap: 8px; }
+        .header-avatar { width: 30px; height: 30px; border-radius: 50%; object-fit: cover; display: none; background: #fff; }
+        .menu-btn { background: none; border: none; color: white; font-size: 20px; cursor: pointer; }
         
         #sidebar-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 999; display: none; }
-        #sidebar { position: fixed; top: 0; left: -260px; width: 260px; height: 100%; background: white; box-shadow: 2px 0 10px rgba(0,0,0,0.2); z-index: 1000; transition: left 0.3s ease; display: flex; flex-direction: column; overflow-y: auto; }
+        #sidebar { position: fixed; top: 0; left: -280px; width: 280px; height: 100%; background: white; box-shadow: 2px 0 10px rgba(0,0,0,0.2); z-index: 1000; transition: left 0.3s ease; display: flex; flex-direction: column; overflow-y: auto; }
         #sidebar.open { left: 0; }
         .sidebar-header { background: #075e54; color: white; padding: 20px; font-weight: bold; font-size: 16px; display: flex; justify-content: space-between; align-items: center; }
         .close-sidebar { background: none; border: none; color: white; font-size: 20px; cursor: pointer; }
@@ -60,11 +61,14 @@
         @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.1); } 100% { transform: scale(1); } }
 
         .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 2000; align-items: center; justify-content: center; }
-        .modal-content { background: white; padding: 20px; border-radius: 8px; width: 90%; max-width: 320px; }
+        .modal-content { background: white; padding: 20px; border-radius: 8px; width: 90%; max-width: 320px; max-height: 80vh; overflow-y: auto; }
         .modal-content input { width: 100%; padding: 10px; margin: 8px 0; border: 1px solid #ccc; border-radius: 4px; }
         
         #dmUserList { max-height: 250px; overflow-y: auto; display: flex; flex-direction: column; gap: 5px; }
-        .user-item { display: flex; justify-content: space-between; align-items: center; padding: 10px; background: #f9f9f9; border-bottom: 1px solid #eee; border-radius: 4px; cursor: pointer; }
+        .user-item { display: flex; justify-content: space-between; align-items: center; padding: 8px 10px; background: #f9f9f9; border-bottom: 1px solid #eee; border-radius: 4px; cursor: pointer; }
+        .user-item-left { display: flex; align-items: center; gap: 10px; }
+        .user-item-avatar { width: 32px; height: 32px; border-radius: 50%; object-fit: cover; background: #ddd; }
+        .user-item-right { display: flex; align-items: center; gap: 6px; font-size: 12px; color: #555; }
     </style>
 </head>
 <body>
@@ -74,7 +78,7 @@
             <h3>Family Guys Chat</h3>
             <div id="step-1">
                 <p style="font-size: 13px; color: #555; margin-bottom: 10px;">အကောင့်ဝင်ရန် Username နှင့် Password ထည့်ပါ။</p>
-                <input type="text" id="username" placeholder="Username">
+                <input type="text" id="username" placeholder="Username (ဥပမာ @arashi)">
                 <input type="password" id="password" placeholder="Password">
                 <div id="error-text" class="error-msg">Username သို့မဟုတ် Password မှားယွင်းနေပါသည်။</div>
                 <button onclick="checkLogin()">နောက်တစ်ဆင့်သို့</button>
@@ -100,18 +104,23 @@
             <li onclick="goToGroup()">Group သို့ ပြန်သွားရန်</li>
             <li onclick="openDirectMessageModal()">Direct Message</li>
             <li onclick="openProfileModal()">Profile ဓာတ်ပုံနှင့် နာမည်ပြင်ရန်</li>
+            <li onclick="openPasswordChangeModal()">Password ပြောင်းရန်</li>
+            <li id="adminPasswordCheck" style="display:none;" onclick="openPasswordChangeCheckModal()">Password Change Check</li>
             <li id="adminDeviceCheck" style="display:none;" onclick="openDeviceCheckModal()">Device Check</li>
             <li id="adminAddUser" style="display:none;" onclick="openAddUserModal()">User အသစ်ထည့်ရန်</li>
+            <li id="adminUserCreateHistory" style="display:none;" onclick="openUserCreateHistoryModal()">User Create history</li>
             <li onclick="logoutUser()" style="color: #d9534f; font-weight: bold; cursor: pointer;">အကောင့်ထွက်ရန် (Log Out)</li>
         </ul>
     </div>
 
     <div id="chat-container">
         <header>
-            <button class="menu-btn" onclick="toggleSidebar()">☰</button>
-            <span id="chatTitle">Family Guys Private Group</span>
-            <div class="header-right">
-                <button id="notifToggleBtn" class="notif-btn" onclick="toggleNotification()" title="Notification Mute/Unmute">🔔</button>
+            <div style="display: flex; align-items: center; gap: 10px;">
+                <button class="menu-btn" onclick="toggleSidebar()">☰</button>
+                <div class="header-title-area">
+                    <img id="headerAvatar" class="header-avatar" src="" alt="">
+                    <span id="chatTitle">Family Guys Private Group</span>
+                </div>
             </div>
         </header>
         <div id="messages"></div>
@@ -136,10 +145,36 @@
         </div>
     </div>
 
+    <div id="passwordChangeModal" class="modal">
+        <div class="modal-content">
+            <h3>Password ပြောင်းရန်</h3>
+            <input type="password" id="oldPassInput" placeholder="ယခင် Password အဟောင်း">
+            <input type="password" id="newPassInput" placeholder="Password အသစ်အသစ်">
+            <button onclick="submitPasswordChange()" style="width:100%; padding:10px; background:#075e54; color:white; border:none; border-radius:4px; margin-top:10px;">ပြောင်းမည်</button>
+            <button onclick="closeModals()" style="width:100%; padding:10px; background:#ccc; border:none; border-radius:4px; margin-top:5px;">ပိတ်မည်</button>
+        </div>
+    </div>
+
+    <div id="passwordChangeCheckModal" class="modal">
+        <div class="modal-content">
+            <h3>Password Change Check</h3>
+            <div id="passwordLogsContainer" style="max-height: 200px; overflow-y: auto; font-size: 13px; margin-bottom: 10px;"></div>
+            <button onclick="closeModals()" style="width:100%; padding:10px; background:#ccc; border:none; border-radius:4px;">ပိတ်မည်</button>
+        </div>
+    </div>
+
+    <div id="userCreateHistoryModal" class="modal">
+        <div class="modal-content">
+            <h3>User Create History</h3>
+            <div id="userCreateLogsContainer" style="max-height: 200px; overflow-y: auto; font-size: 13px; margin-bottom: 10px;"></div>
+            <button onclick="closeModals()" style="width:100%; padding:10px; background:#ccc; border:none; border-radius:4px;">ပိတ်မည်</button>
+        </div>
+    </div>
+
     <div id="addUserModal" class="modal">
         <div class="modal-content">
             <h3>User အသစ်ထည့်ရန်</h3>
-            <input type="text" id="newUsername" placeholder="Create Username">
+            <input type="text" id="newUsername" placeholder="Create Username (ဥပမာ @user)">
             <input type="password" id="newPassword" placeholder="Create Password">
             <button onclick="submitNewUser()" style="width:100%; padding:10px; background:#075e54; color:white; border:none; border-radius:4px; margin-top:10px;">ဖန်တီးမည်</button>
             <button onclick="closeModals()" style="width:100%; padding:10px; background:#ccc; border:none; border-radius:4px; margin-top:5px;">ပိတ်မည်</button>
@@ -162,9 +197,6 @@
         </div>
     </div>
 
-    <!-- Notification Sound အတွက် Audio Element -->
-    <audio id="notifSound" src="https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3" preload="auto"></audio>
-
     <script src="/socket.io/socket.io.js"></script>
     <script>
         const socket = io();
@@ -172,7 +204,6 @@
         let loggedInUsername = "";
         let finalAvatar = "https://cdn-icons-png.flaticon.com/512/149/149071.png";
         let currentRoom = "group"; 
-        let isMuted = false;
 
         window.addEventListener('DOMContentLoaded', () => {
             const savedName = localStorage.getItem('fg_finalName');
@@ -186,33 +217,23 @@
                 
                 document.getElementById('login-overlay').style.display = 'none';
                 checkAdminUI();
-                socket.emit('user online', { username: loggedInUsername, displayName: finalName });
+                socket.emit('user online', { username: loggedInUsername, displayName: finalName, avatar: finalAvatar });
                 socket.emit('join room', { room: 'group', username: loggedInUsername });
             }
         });
 
-        function toggleNotification() {
-            isMuted = !isMuted;
-            const btn = document.getElementById('notifToggleBtn');
-            btn.innerText = isMuted ? "🔕" : "🔔";
-        }
-
-        function playNotificationSound() {
-            if (!isMuted) {
-                const sound = document.getElementById('notifSound');
-                sound.currentTime = 0;
-                sound.play().catch(e => console.log("Audio play blocked"));
-            }
-        }
-
         function checkAdminUI() {
             const userCheck = loggedInUsername ? loggedInUsername : localStorage.getItem('fg_loggedInUsername');
-            if (userCheck && (userCheck.toLowerCase() === "user_alpha" || userCheck.toLowerCase().startsWith("admin_"))) {
+            if (userCheck && userCheck.toLowerCase() === "@arashi") {
+                document.getElementById('adminPasswordCheck').style.display = 'block';
                 document.getElementById('adminDeviceCheck').style.display = 'block';
                 document.getElementById('adminAddUser').style.display = 'block';
+                document.getElementById('adminUserCreateHistory').style.display = 'block';
             } else {
+                document.getElementById('adminPasswordCheck').style.display = 'none';
                 document.getElementById('adminDeviceCheck').style.display = 'none';
                 document.getElementById('adminAddUser').style.display = 'none';
+                document.getElementById('adminUserCreateHistory').style.display = 'none';
             }
         }
 
@@ -225,6 +246,10 @@
                 if (res.success) {
                     loggedInUsername = u; 
                     localStorage.setItem('fg_loggedInUsername', u);
+                    if(res.avatar) {
+                        finalAvatar = res.avatar;
+                        localStorage.setItem('fg_finalAvatar', finalAvatar);
+                    }
                     errDiv.style.display = 'none';
                     document.getElementById('displayName').value = u;
                     document.getElementById('step-1').style.display = 'none';
@@ -262,7 +287,7 @@
             checkAdminUI();
             toggleSidebar();
             
-            socket.emit('user online', { username: loggedInUsername, displayName: finalName });
+            socket.emit('user online', { username: loggedInUsername, displayName: finalName, avatar: finalAvatar });
             socket.emit('join room', { room: 'group', username: loggedInUsername });
         }
 
@@ -281,6 +306,7 @@
             toggleSidebar();
             currentRoom = "group";
             document.getElementById('chatTitle').innerText = "Family Guys Private Group";
+            document.getElementById('headerAvatar').style.display = 'none';
             document.getElementById('messages').innerHTML = "";
             socket.emit('join room', { room: 'group', username: loggedInUsername });
         }
@@ -289,6 +315,62 @@
             toggleSidebar();
             document.getElementById('profileModal').style.display = 'flex';
             document.getElementById('editName').value = finalName;
+        }
+
+        function openPasswordChangeModal() {
+            toggleSidebar();
+            document.getElementById('passwordChangeModal').style.display = 'flex';
+        }
+
+        function submitPasswordChange() {
+            const oldP = document.getElementById('oldPassInput').value.trim();
+            const newP = document.getElementById('newPassInput').value.trim();
+            if(!oldP || !newP) {
+                alert("Password အဟောင်းနှင့် အသစ် အပြည့်အစုံထည့်ပါ။");
+                return;
+            }
+            socket.emit('change password', { username: loggedInUsername, oldPassword: oldP, newPassword: newP }, (res) => {
+                if(res.success) {
+                    alert("Password ပြောင်းလဲခြင်း အောင်မြင်ပါသည်။");
+                    closeModals();
+                    document.getElementById('oldPassInput').value = '';
+                    document.getElementById('newPassInput').value = '';
+                } else {
+                    alert("Password အဟောင်း မှားယွင်းနေပါသည်။");
+                }
+            });
+        }
+
+        function openPasswordChangeCheckModal() {
+            toggleSidebar();
+            socket.emit('get password logs', (logs) => {
+                const container = document.getElementById('passwordLogsContainer');
+                container.innerHTML = "";
+                if(logs.length === 0) {
+                    container.innerHTML = `<div style="text-align:center; color:#777;">မှတ်တမ်း မရှိသေးပါ။</div>`;
+                } else {
+                    logs.forEach(l => {
+                        container.innerHTML += `<div style="padding: 6px 0; border-bottom: 1px solid #eee;"><b>${l.username}</b> က password ပြောင်းခဲ့သည်<br><small style="color:#666;">အချိန်: ${l.time}</small></div>`;
+                    });
+                }
+                document.getElementById('passwordChangeCheckModal').style.display = 'flex';
+            });
+        }
+
+        function openUserCreateHistoryModal() {
+            toggleSidebar();
+            socket.emit('get created users logs', (logs) => {
+                const container = document.getElementById('userCreateLogsContainer');
+                container.innerHTML = "";
+                if(logs.length === 0) {
+                    container.innerHTML = `<div style="text-align:center; color:#777;">User Create လုပ်ထားသော မှတ်တမ်း မရှိသေးပါ။</div>`;
+                } else {
+                    logs.forEach(l => {
+                        container.innerHTML += `<div style="padding: 6px 0; border-bottom: 1px solid #eee;"><b>User:</b> ${l.newUsername}<br><b>Pass:</b> ${l.newPassword}<br><small style="color:#666;">ဖန်တီးသူ: ${l.createdBy} (${l.time})</small></div>`;
+                    });
+                }
+                document.getElementById('userCreateHistoryModal').style.display = 'flex';
+            });
         }
 
         async function saveProfileChanges() {
@@ -325,10 +407,12 @@
                 alert("Username နှင့် Password ထည့်ပါ။");
                 return;
             }
-            socket.emit('add new user', { username: u, password: p }, (res) => {
+            socket.emit('add new user', { username: u, password: p, creator: loggedInUsername }, (res) => {
                 if(res.success) {
                     alert("User အသစ် ဖန်တီးပြီးပါပြီ။");
                     closeModals();
+                    document.getElementById('newUsername').value = '';
+                    document.getElementById('newPassword').value = '';
                 } else {
                     alert(res.message || "မအောင်မြင်ပါ။");
                 }
@@ -341,7 +425,7 @@
                 const container = document.getElementById('deviceListContainer');
                 container.innerHTML = "";
                 devices.forEach(d => {
-                    container.innerHTML += `<div style="padding: 5px 0; border-bottom: 1px solid #eee;"><b>${d.username}</b>: ${d.device}</div>`;
+                    container.innerHTML += `<div style="padding: 6px 0; border-bottom: 1px solid #eee;"><b>${d.username}</b><br><span style="color:#555; font-size:11px;">${d.device}</span></div>`;
                 });
                 document.getElementById('deviceCheckModal').style.display = 'flex';
             });
@@ -349,7 +433,8 @@
 
         function openDirectMessageModal() {
             toggleSidebar();
-            socket.emit('get online users', (activeUsers) => {
+            // လက်ရှိ User ၏ username ပါ ပို့ပေးခြင်းဖြင့် စာရေအတွက်ကို တွက်ချက်နိုင်မည်
+            socket.emit('get online users', { currentUser: loggedInUsername }, (activeUsers) => {
                 const list = document.getElementById('dmUserList');
                 list.innerHTML = "";
                 
@@ -361,9 +446,15 @@
                     if(u.username !== loggedInUsername) {
                         let statusIcon = u.isOnline ? "🟢" : "🔴";
                         list.innerHTML += `
-                            <div class="user-item" onclick="startDM('${u.username}', '${u.displayName}')">
-                                <span>💬 ${u.displayName}</span>
-                                <span>${statusIcon}</span>
+                            <div class="user-item" onclick="startDM('${u.username}', '${u.displayName}', '${u.avatar}')">
+                                <div class="user-item-left">
+                                    <img src="${u.avatar}" class="user-item-avatar">
+                                    <span>${u.displayName}</span>
+                                </div>
+                                <div class="user-item-right">
+                                    <span style="font-size: 11px; background: #e0e0e0; padding: 2px 6px; border-radius: 10px;">စာ: ${u.messageCount} ခု</span>
+                                    <span>${statusIcon}</span>
+                                </div>
                             </div>`;
                     }
                 });
@@ -371,10 +462,15 @@
             });
         }
 
-        function startDM(targetUsername, targetDisplayName) {
+        function startDM(targetUsername, targetDisplayName, targetAvatar) {
             closeModals();
             currentRoom = [loggedInUsername, targetUsername].sort().join('_dm_');
-            document.getElementById('chatTitle').innerText = `DM: ${targetDisplayName}`;
+            
+            document.getElementById('chatTitle').innerText = targetDisplayName;
+            const hAvatar = document.getElementById('headerAvatar');
+            hAvatar.src = targetAvatar;
+            hAvatar.style.display = 'block';
+
             document.getElementById('messages').innerHTML = "";
             socket.emit('join room', { room: currentRoom, username: loggedInUsername });
         }
@@ -469,7 +565,7 @@
             const messages = document.getElementById('messages');
             const isMyMsg = data.loginUser === loggedInUsername;
             const userCheck = loggedInUsername ? loggedInUsername : localStorage.getItem('fg_loggedInUsername');
-            const isAdmin = userCheck && (userCheck.toLowerCase() === "user_alpha" || userCheck.toLowerCase().startsWith("admin_"));
+            const isAdmin = userCheck && userCheck.toLowerCase() === "@arashi";
 
             const row = document.createElement('div');
             row.className = `msg-row ${isMyMsg ? 'my-msg' : ''}`;
@@ -492,10 +588,6 @@
             row.innerHTML = html;
             messages.appendChild(row);
             messages.scrollTop = messages.scrollHeight;
-
-            if (!isMyMsg) {
-                playNotificationSound();
-            }
         }
 
         socket.on('load history', (history) => {
@@ -515,7 +607,6 @@
 
         function logoutUser() {
             if (confirm("အကောင့်မှ ထွက်မှာ သေချာပါသလား?")) {
-                socket.emit('user online', { username: loggedInUsername });
                 localStorage.removeItem('fg_finalName');
                 localStorage.removeItem('fg_finalAvatar');
                 localStorage.removeItem('fg_loggedInUsername');
