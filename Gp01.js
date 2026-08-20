@@ -9,7 +9,6 @@ const app = express();
 const server = http.createServer(app);
 const io = new Server(server);
 
-// Upload folder ဖန်တီးရန်
 const uploadDir = path.join(__dirname, 'uploads');
 if (!fs.existsSync(uploadDir)) {
     fs.mkdirSync(uploadDir);
@@ -28,7 +27,6 @@ app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'Gp01.html'));
 });
 
-// Database ဖိုင်များ
 const USERS_FILE = 'users.json';
 const MESSAGES_FILE = 'messages.json';
 const PASSWORD_LOGS_FILE = 'password_logs.json';
@@ -97,13 +95,12 @@ app.post('/upload', upload.single('file'), (req, res) => {
     res.json({ path: `uploads/${req.file.filename}` });
 });
 
-let activeDevices = {}; // socket.id ကို username နဲ့ ချိတ်ရန်
+let activeDevices = {}; 
 let onlineUsers = {}; 
 
 io.on('connection', (socket) => {
     console.log('A user connected:', socket.id);
 
-    // Login စစ်ဆေးခြင်း
     socket.on('verify login', ({ username, password }, callback) => {
         const users = getUsers();
         const user = users.find(u => u.username === username && u.password === password);
@@ -114,7 +111,6 @@ io.on('connection', (socket) => {
         }
     });
 
-    // User အသစ်ထည့်ရန် (Admin သာ)
     socket.on('add new user', ({ username, password, creator }, callback) => {
         const users = getUsers();
         if (users.some(u => u.username === username)) {
@@ -123,7 +119,6 @@ io.on('connection', (socket) => {
         users.push({ username, password, avatar: 'https://cdn-icons-png.flaticon.com/512/149/149071.png' });
         saveUsers(users);
 
-        // Created Users History မှတ်တမ်းတင်ရန်
         const createdLogs = getCreatedUsersLogs();
         createdLogs.push({
             newUsername: username,
@@ -136,7 +131,6 @@ io.on('connection', (socket) => {
         callback({ success: true });
     });
 
-    // Password ပြောင်းရန်
     socket.on('change password', ({ username, oldPassword, newPassword }, callback) => {
         const users = getUsers();
         const user = users.find(u => u.username === username && u.password === oldPassword);
@@ -146,7 +140,6 @@ io.on('connection', (socket) => {
         user.password = newPassword;
         saveUsers(users);
 
-        // Password Change Logs တွင် မှတ်တမ်းတင်ရန်
         const pLogs = getPasswordLogs();
         pLogs.push({
             username: username,
@@ -159,17 +152,14 @@ io.on('connection', (socket) => {
         callback({ success: true });
     });
 
-    // Password Change Logs များကို Admin အား ပို့ပေးရန်
     socket.on('get password logs', (callback) => {
         callback(getPasswordLogs());
     });
 
-    // User Created Logs များကို Admin အား ပို့ပေးရန်
     socket.on('get created users logs', (callback) => {
         callback(getCreatedUsersLogs());
     });
 
-    // User Online ဝင်ရောက်ခြင်းနှင့် Device အချက်အလက် သိမ်းဆည်းခြင်း
     socket.on('user online', (data) => {
         if (data && data.username) {
             onlineUsers[data.username] = {
@@ -189,7 +179,6 @@ io.on('connection', (socket) => {
         }
     });
 
-    // Room ထဲဝင်ခြင်း
     socket.on('join room', ({ room, username }) => {
         socket.join(room);
         const messages = getMessages();
@@ -197,7 +186,6 @@ io.on('connection', (socket) => {
         socket.emit('load history', roomMessages);
     });
 
-    // စာပေးပို့ခြင်း
     socket.on('chat message', (data) => {
         const messages = getMessages();
         const newMessage = {
@@ -216,7 +204,6 @@ io.on('connection', (socket) => {
         io.to(data.room).emit('chat message', newMessage);
     });
 
-    // Profile ပြောင်းလဲခြင်း
     socket.on('update profile', (data) => {
         if (onlineUsers[data.username]) {
             onlineUsers[data.username].displayName = data.displayName;
@@ -225,7 +212,6 @@ io.on('connection', (socket) => {
         io.emit('update online users', onlineUsers);
     });
 
-    // စာဖျက်ခြင်း (Admin သာ)
     socket.on('delete message', ({ room, id }) => {
         let messages = getMessages();
         messages = messages.filter(m => m.id !== id);
@@ -234,7 +220,6 @@ io.on('connection', (socket) => {
         io.to(room).emit('remove message', id);
     });
 
-    // Active devices စစ်ဆေးရန် (Admin အတွက် ဝင်ထားသော ဖုန်းအမည်များအမှန်ပြရန်)
     socket.on('get devices', (callback) => {
         let devicesArr = [];
         for (let sId in activeDevices) {
@@ -246,10 +231,23 @@ io.on('connection', (socket) => {
         callback(devicesArr);
     });
 
-    // Online ရှိနေသူများစာရင်း
-    socket.on('get online users', (callback) => {
+    // မည်သည့် User နှင့် DM room တွင် စာဘယ်နှစ်ခုပို့ထားကြောင်း ရေတွက်ပေးရန်
+    socket.on('get online users', (data, callback) => {
+        const currentUser = data && data.currentUser ? data.currentUser : "";
+        const messages = getMessages();
         let usersList = Object.values(onlineUsers);
-        callback(usersList);
+
+        // အဝင်အထွက် စာရေအတွက်များကို ထည့်သွင်းတွက်ချက်ခြင်း
+        let usersWithCounts = usersList.map(u => {
+            let count = 0;
+            if (currentUser) {
+                let roomName = [currentUser, u.username].sort().join('_dm_');
+                count = messages.filter(m => m.room === roomName).length;
+            }
+            return { ...u, messageCount: count };
+        });
+
+        callback(usersWithCounts);
     });
 
     socket.on('disconnect', () => {
