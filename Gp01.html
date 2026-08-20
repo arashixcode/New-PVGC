@@ -22,13 +22,7 @@
         .login-card button { width: 100%; padding: 12px; background: #075e54; color: white; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; margin-top: 5px; }
         .error-msg { color: red; font-size: 12px; margin-bottom: 10px; display: none; }
 
-        #chat-container { 
-            display: flex; 
-            flex-direction: column; 
-            height: 100vh; 
-            height: 100dvh; 
-            position: relative;
-        }
+        #chat-container { display: flex; flex-direction: column; height: 100vh; height: 100dvh; position: relative; }
         
         header { background: #075e54; color: white; padding: 10px 15px; font-size: 18px; font-weight: bold; display: flex; align-items: center; justify-content: space-between; flex-shrink: 0; }
         .header-right { display: flex; align-items: center; gap: 10px; }
@@ -43,15 +37,7 @@
         .sidebar-menu li { padding: 15px 20px; border-bottom: 1px solid #eee; cursor: pointer; font-size: 14px; color: #333; }
         .sidebar-menu li:hover { background: #f0f0f0; }
 
-        #messages { 
-            flex: 1; 
-            overflow-y: auto; 
-            padding: 15px; 
-            display: flex; 
-            flex-direction: column; 
-            gap: 10px; 
-            padding-bottom: 20px; 
-        }
+        #messages { flex: 1; overflow-y: auto; padding: 15px; display: flex; flex-direction: column; gap: 10px; padding-bottom: 20px; }
         
         .msg-row { display: flex; align-items: flex-end; gap: 8px; max-width: 75%; position: relative; }
         .msg-row.my-msg { margin-left: auto; flex-direction: row-reverse; }
@@ -65,20 +51,7 @@
         .bubble img, .bubble video { max-width: 200px; border-radius: 6px; display: block; margin-top: 5px; }
         .bubble audio { max-width: 220px; display: block; margin-top: 5px; }
 
-        .chat-footer { 
-            background: #f0f0f0; 
-            padding: 8px 12px; 
-            display: flex; 
-            align-items: center; 
-            gap: 8px; 
-            border-top: 1px solid #ddd; 
-            flex-shrink: 0; 
-            position: sticky;
-            bottom: 0;
-            width: 100%;
-            z-index: 100;
-        }
-        
+        .chat-footer { background: #f0f0f0; padding: 8px 12px; display: flex; align-items: center; gap: 8px; border-top: 1px solid #ddd; flex-shrink: 0; position: sticky; bottom: 0; width: 100%; z-index: 100; }
         .icon-btn { background: none; border: none; font-size: 20px; cursor: pointer; padding: 5px; color: #555; }
         .chat-footer input[type="text"] { flex: 1; padding: 8px 12px; border: 1px solid #ccc; border-radius: 20px; outline: none; background: white; font-size: 14px; }
         .send-btn { background: #075e54; color: white; border: none; padding: 8px 14px; border-radius: 20px; font-weight: bold; cursor: pointer; }
@@ -144,7 +117,7 @@
         <div id="messages"></div>
 
         <div class="chat-footer">
-            <label class="icon-btn" title="Profileဓာတ်ပုံတင်ရန်">📁
+            <label class="icon-btn" title="ဓာတ်ပုံ/ဗီဒီယို တင်ရန်">📁
                 <input type="file" id="mediaInput" accept="image/*,video/*" style="display: none;" onchange="sendFile()">
             </label>
             <input type="text" id="msgInput" placeholder="စာရိုက်ရန်..." onkeypress="if(event.key === 'Enter') sendText()">
@@ -214,7 +187,7 @@
                 document.getElementById('login-overlay').style.display = 'none';
                 checkAdminUI();
                 socket.emit('user online', { username: loggedInUsername, displayName: finalName });
-                socket.emit('join room', { room: 'group', username: finalName, loginUser: loggedInUsername });
+                socket.emit('join room', { room: 'group', username: loggedInUsername });
             }
         });
 
@@ -290,7 +263,7 @@
             toggleSidebar();
             
             socket.emit('user online', { username: loggedInUsername, displayName: finalName });
-            socket.emit('join room', { room: 'group', username: finalName, loginUser: loggedInUsername });
+            socket.emit('join room', { room: 'group', username: loggedInUsername });
         }
 
         function toggleSidebar() {
@@ -309,7 +282,7 @@
             currentRoom = "group";
             document.getElementById('chatTitle').innerText = "Family Guys Private Group";
             document.getElementById('messages').innerHTML = "";
-            socket.emit('join room', { room: 'group', username: finalName, loginUser: loggedInUsername });
+            socket.emit('join room', { room: 'group', username: loggedInUsername });
         }
 
         function openProfileModal() {
@@ -336,7 +309,6 @@
             closeModals();
             checkAdminUI();
             
-            // နာမည်ပြောင်းလဲမှုအား Real-time ဖြင့် Server သို့ အကြောင်းကြားမည်
             socket.emit('update profile', { username: loggedInUsername, displayName: finalName, avatar: finalAvatar });
             alert("Profile ပြင်ဆင်ပြီးပါပြီ။");
         }
@@ -366,7 +338,7 @@
         function openDeviceCheckModal() {
             toggleSidebar();
             socket.emit('get devices', (devices) => {
-    devices     const container = document.getElementById('deviceListContainer');
+                const container = document.getElementById('deviceListContainer');
                 container.innerHTML = "";
                 devices.forEach(d => {
                     container.innerHTML += `<div style="padding: 5px 0; border-bottom: 1px solid #eee;"><b>${d.username}</b>: ${d.device}</div>`;
@@ -375,7 +347,6 @@
             });
         }
 
-        // Online ရှိနေသူများကိုသာ DM စာရင်းတွင် 🟢 / 🔴 ဖြင့်ပြသခြင်း
         function openDirectMessageModal() {
             toggleSidebar();
             socket.emit('get online users', (activeUsers) => {
@@ -405,7 +376,7 @@
             currentRoom = [loggedInUsername, targetUsername].sort().join('_dm_');
             document.getElementById('chatTitle').innerText = `DM: ${targetDisplayName}`;
             document.getElementById('messages').innerHTML = "";
-            socket.emit('join room', { room: currentRoom, username: finalName, loginUser: loggedInUsername });
+            socket.emit('join room', { room: currentRoom, username: loggedInUsername });
         }
 
         async function sendText() {
@@ -522,7 +493,6 @@
             messages.appendChild(row);
             messages.scrollTop = messages.scrollHeight;
 
-            // ကိုယ့်ဆီ မဟုတ်ဘဲ အခြားသူဆီက လာတဲ့စာဆိုရင် Notification Sound မြည်စေရန်
             if (!isMyMsg) {
                 playNotificationSound();
             }
@@ -545,7 +515,7 @@
 
         function logoutUser() {
             if (confirm("အကောင့်မှ ထွက်မှာ သေချာပါသလား?")) {
-                socket.emit('user offline', { username: loggedInUsername });
+                socket.emit('user online', { username: loggedInUsername });
                 localStorage.removeItem('fg_finalName');
                 localStorage.removeItem('fg_finalAvatar');
                 localStorage.removeItem('fg_loggedInUsername');
